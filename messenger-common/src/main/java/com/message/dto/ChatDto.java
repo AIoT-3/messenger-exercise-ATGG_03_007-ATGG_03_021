@@ -2,7 +2,7 @@ package com.message.dto;
 
 import java.util.List;
 
-public class Chat {
+public class ChatDto {
         public record MessageRequest(
             long roomId,
             String message

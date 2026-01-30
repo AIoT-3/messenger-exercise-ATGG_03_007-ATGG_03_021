@@ -2,7 +2,7 @@ package com.message.dto;
 
 import java.util.List;
 
-public class User {
+public class UserDto {
         public record UserInfo(
             String id,
             String name,

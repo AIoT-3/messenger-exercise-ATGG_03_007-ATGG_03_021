@@ -2,7 +2,7 @@ package com.message.dto;
 
 import java.util.List;
 
-public class Room {
+public class RoomDto {
         public record CreateRequest(
             String roomName
         ) {}
