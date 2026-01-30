@@ -8,6 +8,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="messenger-server" />
         <module name="messenger-common" />
+        <module name="messenger-client" />
       </profile>
     </annotationProcessing>
   </component>

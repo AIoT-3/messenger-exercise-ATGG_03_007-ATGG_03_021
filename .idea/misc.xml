@@ -7,6 +7,7 @@
         <option value="$PROJECT_DIR$/messenger-common/pom.xml" />
         <option value="$PROJECT_DIR$/messenger-server/pom.xml" />
         <option value="$PROJECT_DIR$/messenger-client/pom.xml" />
+        <option value="$PROJECT_DIR$/pom.xml" />
       </list>
     </option>
   </component>
