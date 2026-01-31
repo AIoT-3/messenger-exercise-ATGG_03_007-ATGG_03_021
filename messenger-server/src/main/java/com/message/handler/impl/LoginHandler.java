@@ -1,7 +1,6 @@
 package com.message.handler.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.message.domain.SessionManagement;
 import com.message.dto.AuthDto;
 import com.message.entity.UserEntity;
@@ -17,7 +16,7 @@ import java.util.UUID;
 
 @Slf4j
 public class LoginHandler implements Handler {
-    private static final String METHOD = "login";
+    private static final String METHOD = "LOGIN";
 
     private final AuthMapper authMapper = new AuthMapperImpl();
     private final AuthService authService = new AuthImplService();
@@ -29,7 +28,7 @@ public class LoginHandler implements Handler {
     }
 
     @Override
-    public String execute(String value) {
+    public Object execute(String value) {
 
         AuthDto.LoginRequest request;
         try {
@@ -44,16 +43,8 @@ public class LoginHandler implements Handler {
         UUID uuid = UUID.randomUUID();
 
         AuthDto.LoginResponse response = authMapper.toLoginResponse(user, uuid.toString());
+        log.debug("[로그인 시도] 로그인 성공 - userId: {}", response.userId());
 
-        String responseJson;
-        try {
-            responseJson = authMapper.toJson(response);
-        } catch (JsonProcessingException e) {
-            throw new ObjectMappingFailException("[로그인 요청] 로그인 응답 json 변환 실패");
-        }
-
-        SessionManagement.addSessions(user.getUserId(), uuid.toString());
-
-        return responseJson;
+        return response;
     }
 }

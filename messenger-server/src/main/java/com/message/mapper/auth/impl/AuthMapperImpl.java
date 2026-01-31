@@ -26,9 +26,4 @@ public class AuthMapperImpl implements AuthMapper {
     public AuthDto.LoginResponse toLoginResponse(UserEntity user, String uuid) {
         return new AuthDto.LoginResponse(user.getUserId(), uuid, "Welcome!");
     }
-
-    @Override
-    public String toJson(AuthDto.LoginResponse response) throws JsonProcessingException {
-        return objectMapper.writeValueAsString(response);
-    }
 }

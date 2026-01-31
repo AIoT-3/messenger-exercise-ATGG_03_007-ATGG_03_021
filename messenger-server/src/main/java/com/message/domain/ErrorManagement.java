@@ -39,6 +39,11 @@ public class ErrorManagement {
         public static final String NOT_FOUND = "HANDLER.NOT_FOUND";
     }
 
+    public static class Session {
+        public static final String NOT_FOUND = "SESSION.NOT_FOUND";
+        public static final String ALREADY_EXISTS = "SESSION.ALREADY_EXISTS";
+    }
+
     public static class Server {
         public static final String SERVER_DOWN = "SERVER.SERVER_DOWN";
     }
