@@ -11,7 +11,7 @@ public class ServerMain {
         MessageServer messageServer = new MessageServer();
         Thread thread = new Thread(messageServer);
         thread.start();
-        log.info("스레드 시작합니다.");
+        log.info("서버를 열었습니다.");
 
 
         try {
