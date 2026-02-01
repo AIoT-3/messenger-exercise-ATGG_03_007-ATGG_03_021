@@ -1,3 +1,11 @@
-.idea
+# IntelliJ
+.idea/
+*.iml
+
+# macOS
 .DS_Store
 **/.DS_Store
+
+# Java build
+target/
+*.class
