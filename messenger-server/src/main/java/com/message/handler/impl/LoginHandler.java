@@ -1,6 +1,7 @@
 package com.message.handler.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.message.TypeManagement;
 import com.message.domain.SessionManagement;
 import com.message.dto.AuthDto;
 import com.message.entity.UserEntity;
@@ -16,15 +17,17 @@ import java.util.UUID;
 
 @Slf4j
 public class LoginHandler implements Handler {
-    private static final String METHOD = "LOGIN";
+    // private static final String METHOD = "LOGIN";
 
     private final AuthMapper authMapper = new AuthMapperImpl();
     private final AuthService authService = new AuthImplService();
 
-
+    // TODO 수정사항 (재민)
+    // 하드코딩하지 말고 타입매니지먼트에 정의해놓은것 가져다 쓰기
     @Override
     public String getMethod() {
-        return METHOD;
+        // return METHOD;
+        return TypeManagement.Auth.LOGIN;
     }
 
     @Override

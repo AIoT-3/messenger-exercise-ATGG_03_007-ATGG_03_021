@@ -140,7 +140,8 @@ public class MessageDispatcher implements Executable {
             // 핸들러에 널이 전달되니까 로직 꼬이고 세션 필터랑 핸들러에서 에러 나는듯
             // 객체 전체를 문자열로 넘기고 싶다면? dataNode.toString() 사용하거나 dataNode 자체를 핸들러에게 넘기기
             // 만약 데이터가 단순 문자열이 아니라 제이슨 객체라면 toString()
-            Object result = handler.execute(dataNode.isTextual() ? dataNode.textValue() : dataNode.toString());
+            // Object result = handler.execute(dataNode.isTextual() ? dataNode.textValue() : dataNode.toString());
+            Object result = handler.execute(jsonBody);
 
             // 6. 결과 반환 (성공 응답 생성)
             return dispatchMapper.toResult(result);
