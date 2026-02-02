@@ -1,9 +1,9 @@
 package com.message.thread.runnable;
 
-import com.message.config.AppConfig;
+import com.message.cofig.AppConfig;
+import com.message.thread.channel.RequestChannel;
 import com.message.thread.executable.MessageDispatcher;
 import com.message.thread.pool.WorkerThreadPool;
-import com.message.thread.channel.RequestChannel;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
