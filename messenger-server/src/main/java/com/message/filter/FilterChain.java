@@ -5,13 +5,15 @@ import com.message.filter.impl.LoginStateCheckFilter;
 import com.message.filter.impl.SessionFilter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
 @Slf4j
 public class FilterChain {
     private final List<Filter> filters;
-    private int index = 0;
+    private Iterator<Filter> filterIterator;
+
 
     public FilterChain() {
         filters = new LinkedList<>();
@@ -31,6 +33,10 @@ public class FilterChain {
         filters.addLast(filter);
         return this;
     }
+    
+    private void iterator(){
+        filterIterator = filters.iterator();
+    }
 
     /**
      * 필터 체인의 다음 필터를 실행합니다.
@@ -38,21 +44,18 @@ public class FilterChain {
      * @param request 헤더
      */
     public void doFilter(RequestDto request) {
-        log.debug("[Filter Chain] ChainSize: {}", filters.size());
-        if (index < filters.size()) {
-            Filter filter = filters.get(index);
-            log.debug("[Filter Chain] index: {}, filterName: {}", index++, filter.getClass().getName());
-            filter.doFilter(request, this);
+        if(filterIterator.hasNext()){
+            Filter next = filterIterator.next();
+            next.doFilter(request, this);
+            log.debug("[Filter Chain] filterName: {}", next.getClass().getName());
         }
     }
 
-    public void reset(){
-        index = 0;
-    }
-
     public static FilterChain getFilterChain() {
-        return new FilterChain()
+        FilterChain filterChain = new FilterChain()
                 .addLastFilter(new SessionFilter())
                 .addLastFilter(new LoginStateCheckFilter());
+        filterChain.iterator();
+        return filterChain;
     }
 }
