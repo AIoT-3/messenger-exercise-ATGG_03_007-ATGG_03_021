@@ -1,7 +1,8 @@
 package com.message.service.auth.impl;
 
+import com.message.domain.SessionManagement;
 import com.message.domain.UserManagement;
-import com.message.dto.AuthDto;
+import com.message.dto.data.impl.AuthDto;
 import com.message.entity.UserEntity;
 import com.message.exception.custom.user.LoginInvalidRequestException;
 import com.message.exception.custom.user.UserNotFoundException;
@@ -23,7 +24,7 @@ public class AuthImplService implements AuthService {
         UserEntity user = UserManagement.getUser(request.userId());
         if (Objects.isNull(user)) {
             log.debug("[로그인 시도] 존재하지 않는 유저입니다.");
-            throw new UserNotFoundException("[로그인 시도] 존재하지 않는 유저입니다.");
+            throw new UserNotFoundException("[로그인 시도] 로그인 정보가 잘못 되었습니다.");
         }
 
         if (!user.getPassWord().equals(request.password())){
@@ -36,6 +37,6 @@ public class AuthImplService implements AuthService {
 
     @Override
     public void logout(String sessionId) {
-
+        SessionManagement.deleteSession(sessionId);
     }
 }

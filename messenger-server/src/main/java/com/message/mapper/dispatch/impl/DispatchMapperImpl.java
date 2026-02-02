@@ -5,7 +5,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.message.TypeManagement;
-import com.message.dto.ErrorDto;
+import com.message.domain.AtomicLongIdManagement;
+import com.message.dto.RequestDto;
+import com.message.dto.data.RequestDataDto;
+import com.message.dto.data.impl.ErrorDto;
 import com.message.dto.HeaderDto;
 import com.message.dto.ResponseDto;
 import com.message.exception.custom.mapper.ObjectMappingFailException;
@@ -15,6 +18,7 @@ import com.message.mapper.dispatch.ResponseMapperFactory;
 import lombok.extern.slf4j.Slf4j;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 
 @Slf4j
 public class DispatchMapperImpl implements DispatchMapper {
@@ -36,7 +40,7 @@ public class DispatchMapperImpl implements DispatchMapper {
     }
 
     @Override
-    public HeaderDto.RequestHeader requestHeaderPasser(JsonNode rootNode) throws ObjectMappingFailException {
+    public HeaderDto.RequestHeader requestHeaderParser(JsonNode rootNode) throws ObjectMappingFailException {
         JsonNode headerNode = rootNode.path("header");
         String type = headerNode.path("type").asText();
         String sessionId = headerNode.path("sessionId").asText();
@@ -48,6 +52,39 @@ public class DispatchMapperImpl implements DispatchMapper {
             throw new ObjectMappingFailException(e.getMessage());
         }
         return new HeaderDto.RequestHeader(type, timestamp, sessionId);
+    }
+
+    @Override
+    public RequestDataDto requestDataParser(String type, JsonNode rootNode) throws ObjectMappingFailException {
+        Class<? extends RequestDataDto> clazz = TypeManagement.requestDataDtoClassMap.get(type);
+        if(Objects.isNull(clazz)){
+            return null;
+        }
+        log.debug("[data 파싱] 파싱할 클래스 확인 - {}", clazz.getName());
+
+        try {
+            JsonNode dataNode = rootNode.path("data");
+            log.debug("data 내용:{}", dataNode.textValue());
+
+            if(dataNode.isMissingNode() || dataNode.isNull()) {
+                log.warn("[data 파싱] data 노드가 비어있습니다.");
+                throw new ObjectMappingFailException("[data 파싱] data 노드가 비어있습니다.");
+            }
+
+            return mapper.readValue(dataNode.traverse(), clazz);
+        } catch (Exception e) {
+            log.error("[data 파싱] 파싱 오류 발생");
+            throw new ObjectMappingFailException(e.getMessage());
+        }
+    }
+
+    @Override
+    public RequestDto requestParser(HeaderDto.RequestHeader header, RequestDataDto data) throws ObjectMappingFailException {
+        if(Objects.isNull(header) || Objects.isNull(data)){
+//            throw new
+        }
+
+        return new RequestDto(header, data);
     }
 
     @Override
@@ -63,10 +100,13 @@ public class DispatchMapperImpl implements DispatchMapper {
 
     @Override
     public String toError(ErrorDto response) throws JsonProcessingException {
-        // TODO 수정사항 (재민)
-        // messageId 필드 추가했으니 여기서도 System.currentTimeMillis() 추가해야함
-        HeaderDto.ResponseHeader responseHeader = new HeaderDto.ResponseHeader(TypeManagement.ERROR, false, OffsetDateTime.now(), System.currentTimeMillis());
-        ResponseDto<ErrorDto> errorResponse = new ResponseDto<>(responseHeader, response);
+        HeaderDto.ResponseHeader responseHeader = new HeaderDto.ResponseHeader(
+                TypeManagement.ERROR,
+                false,
+                OffsetDateTime.now(),
+                AtomicLongIdManagement.getMessageIdSequenceIncreateAndGet()
+        );
+        ResponseDto errorResponse = new ResponseDto(responseHeader, response);
         return mapper.writeValueAsString(errorResponse);
     }
 }

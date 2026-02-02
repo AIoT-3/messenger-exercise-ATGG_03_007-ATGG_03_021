@@ -11,9 +11,7 @@ import java.util.Set;
 public class ResponseMapperFactory {
     private static final Map<String, ResponseMapper> responseMapperMap = new HashMap<>();
 
-    // TODO 수정사항
     static {
-        // Reflections reflections = new Reflections("com.message.dispatch");
         Reflections reflections = new Reflections("com.message.mapper.dispatch"); // 이상한 곳 스캔하고 있었음. 경로 수정함
 
         Set<Class<? extends ResponseMapper>> classes = reflections.getSubTypesOf(ResponseMapper.class);

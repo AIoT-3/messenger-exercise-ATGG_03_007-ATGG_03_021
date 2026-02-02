@@ -1,6 +1,6 @@
 package com.message.exception;
 
-import com.message.dto.ErrorDto;
+import com.message.dto.data.impl.ErrorDto;
 import com.message.exception.custom.AlreadyExistException;
 import com.message.exception.custom.InvalidRequestException;
 import com.message.exception.custom.NotFoundException;

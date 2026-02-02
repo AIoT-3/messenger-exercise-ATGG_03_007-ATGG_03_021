@@ -11,21 +11,22 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SessionManagement {
     private static final Map<String, String> sessions = new ConcurrentHashMap<>();
 
-    // TODO 수정사항 (재민)
-    // 파라미터 순서 바꿈
     public static void addSessions(String uuid, String userId) {
-        //TODO 검증하셈
         if (Objects.isNull(userId) || Objects.isNull(uuid) || userId.isBlank() || uuid.isBlank()) {
             log.error("[세션 등록] 값이 존재하지 않습니다");
             throw new BusinessException(ErrorManagement.Server.SERVER_DOWN, "서버 다운", 500);
         }
 
         sessions.put(uuid, userId);
-        log.info("[세션 등록 완료] User: {}, SessionId: {}", userId, uuid); // TODO 로그 찍었음
+        log.debug("[세션 등록 완료] User: {}, SessionId: {}", userId, uuid);
     }
 
-    public static boolean isExisted(String uuid) {
+    public static boolean isExistedUuid(String uuid) {
         return sessions.containsKey(uuid);
+    }
+
+    public static boolean isExistedUserId(String userId) {
+        return sessions.containsValue(userId);
     }
 
     public static String getUserId(String uuid) {
@@ -42,6 +43,6 @@ public class SessionManagement {
             throw new IllegalArgumentException("존재하지 않는 uuid입니다.");
         }
 
-        log.info("[세션 삭제 성공] UserID: {}, UUID: {}", removedUserId, uuid);
+        log.debug("[세션 삭제 성공] UserID: {}, UUID: {}", removedUserId, uuid);
     }
 }

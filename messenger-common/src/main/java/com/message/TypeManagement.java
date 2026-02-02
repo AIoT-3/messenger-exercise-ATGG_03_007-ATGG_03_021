@@ -1,5 +1,14 @@
 package com.message;
 
+import com.message.dto.data.MessageDataType;
+import com.message.dto.data.RequestDataDto;
+import com.message.dto.data.ResponseDataDto;
+import org.reflections.Reflections;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
 public class TypeManagement {
 
     // --- 공통 및 에러 ---
@@ -53,4 +62,22 @@ public class TypeManagement {
         public static final String EXIT_SUCCESS = "CHAT-ROOM-EXIT-SUCCESS";
     }
 
+    public static final Map<String, Class<? extends RequestDataDto>> requestDataDtoClassMap = new HashMap<>();
+    public static final Map<String, Class<? extends ResponseDataDto>> responseDataDataDtoClassMap = new HashMap<>();
+
+    static {
+        Reflections reflections = new Reflections("com.message.dto.data.impl");
+        Set<Class<?>> annotatedClasses = reflections.getTypesAnnotatedWith(MessageDataType.class);
+
+        for (Class<?> clazz : annotatedClasses) {
+            MessageDataType annotation = clazz.getAnnotation(MessageDataType.class);
+            String type = annotation.value();
+
+            if (RequestDataDto.class.isAssignableFrom(clazz)) {
+                requestDataDtoClassMap.put(type, (Class<? extends RequestDataDto>) clazz);
+            } else if (ResponseDataDto.class.isAssignableFrom(clazz)) {
+                responseDataDataDtoClassMap.put(type, (Class<? extends ResponseDataDto>) clazz);
+            }
+        }
+    }
 }

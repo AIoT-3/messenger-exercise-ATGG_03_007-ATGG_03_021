@@ -1,6 +1,6 @@
 package com.message.service.room;
 
-import com.message.dto.RoomDto;
+import com.message.dto.data.impl.RoomDto;
 
 public interface RoomService {
     RoomDto.CreateResponse createRoom(String sessionId, RoomDto.CreateRequest request);

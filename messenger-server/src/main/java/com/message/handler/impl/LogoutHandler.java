@@ -2,9 +2,7 @@ package com.message.handler.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.message.TypeManagement;
-import com.message.dto.AuthDto;
-import com.message.dto.HeaderDto;
-import com.message.dto.ResponseDto;
+import com.message.dto.data.impl.AuthDto;
 import com.message.exception.custom.mapper.ObjectMappingFailException;
 import com.message.handler.Handler;
 import com.message.mapper.auth.AuthMapper;
@@ -12,11 +10,6 @@ import com.message.mapper.auth.impl.AuthMapperImpl;
 import com.message.service.auth.AuthService;
 import com.message.service.auth.impl.AuthImplService;
 import lombok.extern.slf4j.Slf4j;
-
-import java.time.OffsetDateTime;
-
-// TODO 수정사항 (재민)
-// LogoutHandler 생성
 
 @Slf4j
 public class LogoutHandler implements Handler {

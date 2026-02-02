@@ -1,7 +1,7 @@
 package com.message.filter;
 
-import com.message.dto.HeaderDto;
+import com.message.dto.RequestDto;
 
 public interface Filter {
-    void doFilter(HeaderDto.RequestHeader header, FilterChain chain);
+    void doFilter(RequestDto request, FilterChain chain);
 }

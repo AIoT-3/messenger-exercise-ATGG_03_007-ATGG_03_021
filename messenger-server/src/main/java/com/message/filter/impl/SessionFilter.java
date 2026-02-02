@@ -1,8 +1,10 @@
 package com.message.filter.impl;
 
+import com.message.TypeManagement;
 import com.message.config.ServerConfig;
 import com.message.domain.SessionManagement;
 import com.message.dto.HeaderDto;
+import com.message.dto.RequestDto;
 import com.message.exception.custom.filter.AlreadyAuthenticatedException;
 import com.message.exception.custom.filter.UnauthenticatedException;
 import com.message.filter.Filter;
@@ -14,15 +16,12 @@ import java.util.Objects;
 @Slf4j
 public class SessionFilter implements Filter {
     @Override
-    public void doFilter(HeaderDto.RequestHeader header, FilterChain chain) {
+    public void doFilter(RequestDto request, FilterChain chain) {
+        HeaderDto.RequestHeader header = request.header();
         String s = header.sessionId();
 
-        // TODO 수정사항 (재민)
-        // 세션 존재 여부 확인 -> null이 아니면서 비어있지 않고 서버 메모리에도 등록되어 있어야 함
-        boolean hasValidSession = (s != null && !s.trim().isEmpty() && SessionManagement.isExisted(s));
+        boolean hasValidSession = (s != null && !s.trim().isEmpty() && SessionManagement.isExistedUuid(s));
 
-        // TODO 수정사항 (재민)
-        // 인증이 필요한 요청인지(비로그인 허용 대상인지 확인) -> 조건문 가독성 업
         boolean isSkipTarget = ServerConfig.SkipSessionMethodNames.contains(header.type());
 
         if (isSkipTarget) {
@@ -32,16 +31,15 @@ public class SessionFilter implements Filter {
                 throw new AlreadyAuthenticatedException("이미 로그인된 상태입니다.");
             }
             // 세션이 없으면 통과 -> 로그인 하러 감
+            if (header.type().equals(TypeManagement.Auth.LOGIN)){
+                chain.doFilter(request);
+            }
         } else {
             // 유효한 세션이 없으면 -> 접근 차단
             if (!hasValidSession) {
                 log.debug("[세션 필터] 인증되지 않은 접근 - type: {}", header.type());
                 throw new UnauthenticatedException("로그인이 필요한 서비스입니다.");
             }
-        }
-        // 필터 통과 후 다음 단계로 진행
-        if (Objects.nonNull(chain)) {
-            chain.doFilter(header);
         }
     }
 }

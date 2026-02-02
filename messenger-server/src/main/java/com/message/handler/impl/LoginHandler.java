@@ -3,7 +3,7 @@ package com.message.handler.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.message.TypeManagement;
 import com.message.domain.SessionManagement;
-import com.message.dto.AuthDto;
+import com.message.dto.data.impl.AuthDto;
 import com.message.entity.UserEntity;
 import com.message.exception.custom.mapper.ObjectMappingFailException;
 import com.message.handler.Handler;
@@ -17,16 +17,12 @@ import java.util.UUID;
 
 @Slf4j
 public class LoginHandler implements Handler {
-    // private static final String METHOD = "LOGIN";
 
     private final AuthMapper authMapper = new AuthMapperImpl();
     private final AuthService authService = new AuthImplService();
 
-    // TODO 수정사항 (재민)
-    // 하드코딩하지 말고 타입매니지먼트에 정의해놓은것 가져다 쓰기
     @Override
     public String getMethod() {
-        // return METHOD;
         return TypeManagement.Auth.LOGIN;
     }
 
@@ -45,8 +41,6 @@ public class LoginHandler implements Handler {
         // 서비스 로직 실행 (유저 검증)
         UserEntity user = authService.login(request);
 
-        // TODO 수정사항 (재민)
-        // 서버에 로그인 상태를 유지(세션 관리)하는 단계 빠져있음 -> SessionManagement에 저장(세션 저장)
         UUID uuid = UUID.randomUUID();
         String sessionId = uuid.toString();
 

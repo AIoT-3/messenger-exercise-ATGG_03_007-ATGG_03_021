@@ -1,6 +1,6 @@
 package com.message.service.chat;
 
-import com.message.dto.ChatDto;
+import com.message.dto.data.impl.ChatDto;
 
 public interface ChatService {
     ChatDto.MessageResponse sendChatMessage(String sessionId, ChatDto.MessageRequest request);

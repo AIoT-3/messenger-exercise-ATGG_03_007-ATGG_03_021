@@ -1,7 +1,9 @@
 package com.message.dto;
 
-public record ResponseDto<T>(
+import com.message.dto.data.ResponseDataDto;
+
+public record ResponseDto(
         HeaderDto.ResponseHeader header,
-        T data
+        ResponseDataDto data
 ) {
 }

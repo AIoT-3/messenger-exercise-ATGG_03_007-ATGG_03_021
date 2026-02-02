@@ -2,13 +2,13 @@ package com.message.thread.executable;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.message.domain.FilterManagement;
-import com.message.domain.SessionManagement;
-import com.message.dto.ErrorDto;
 import com.message.dto.HeaderDto;
+import com.message.dto.RequestDto;
+import com.message.dto.data.RequestDataDto;
+import com.message.dto.data.impl.ErrorDto;
 import com.message.exception.GlobalExceptionHandler;
 import com.message.exception.custom.handler.HandlerNotFoundException;
-import com.message.exception.custom.mapper.ObjectMappingFailException;
+import com.message.filter.FilterChain;
 import com.message.handler.Handler;
 import com.message.handler.HandlerFactory;
 import com.message.mapper.dispatch.DispatchMapper;
@@ -22,13 +22,13 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.Objects;
 
 @Slf4j
 public class MessageDispatcher implements Executable {
     private final DispatchMapper dispatchMapper = new DispatchMapperImpl();
     private final GlobalExceptionHandler globalExceptionHandler = new GlobalExceptionHandler();
     private final Socket socket;
+    private final FilterChain filterChain = FilterChain.getFilterChain();
 
     public MessageDispatcher(Socket socket) {
         this.socket = socket;
@@ -52,7 +52,6 @@ public class MessageDispatcher implements Executable {
                 int length = Integer.parseInt(lengthLine.substring("message-length:".length()).trim());
                 log.debug("읽어야 할 본문 길이: {}", length);
 
-                // TODO 수정사항
                 // 본문 읽기 (바이트 단위가 아닌 문자 단위이므로)
                 StringBuilder bodyBuilder = new StringBuilder();
                 int charCode;
@@ -75,10 +74,8 @@ public class MessageDispatcher implements Executable {
                 }
 
                 String result = dispatch(jsonBody);
-                log.debug("최종 전송할 응답 JSON: {}", result); // TODO 응답 보내기도 전에 닫아버리는 것 같아서 테스트
+                log.debug("최종 전송할 응답 JSON: {}", result);
 
-
-                // TODO 수정사항 (재민)
                 // 요구사항 명세서에 길이 헤더 (Length Line) 첫 줄에 보내라고 함
                 byte[] responseBytes = result.getBytes(StandardCharsets.UTF_8);
 
@@ -86,21 +83,6 @@ public class MessageDispatcher implements Executable {
                 writer.println(result); // 페이로드(제이슨 데이터) 전송
                 writer.flush();
 
-                // 2. 해당 길이만큼 읽기
-//                char[] buffer = new char[length];
-//                int totalRead = 0;
-//                while (totalRead < length) {
-//                    int read = reader.read(buffer, totalRead, length - totalRead);
-//                    if (read == -1) {
-//                        throw new IOException("Unexpected end of stream");
-//                    }
-//                    totalRead += read;
-//                }
-//
-//                String result = dispatch(new String(buffer));
-//
-//                writer.println(result);
-//                writer.flush();
             }
         } catch (IOException e) {
             log.error("[스레드 에러] - {}", e.getMessage());
@@ -110,21 +92,22 @@ public class MessageDispatcher implements Executable {
 
     private String dispatch(String jsonBody) {
         try {
-            log.debug("jsonBody:{}", jsonBody);
             // 1. JSON을 트리 구조로 먼저 읽습니다. (전체 변환 X)
-            JsonNode rootNode;
-            rootNode = dispatchMapper.readTree(jsonBody);
+            JsonNode rootNode = dispatchMapper.readTree(jsonBody);
 
             // 2. Header 영역에서 필요한 정보 추출
-            HeaderDto.RequestHeader requestHeader;
-            requestHeader = dispatchMapper.requestHeaderPasser(rootNode);
+            HeaderDto.RequestHeader requestHeader = dispatchMapper.requestHeaderParser(rootNode);
 
-            // TODO 수정사항 (재민)
-            // FilterManagement.filterChain.doFilter(requestHeader);
-            FilterManagement.getChain().doFilter(requestHeader);
+            RequestDataDto requestData = dispatchMapper.requestDataParser(requestHeader.type(), rootNode);
+
+            RequestDto request = dispatchMapper.requestParser(requestHeader, requestData);
+
+            // TODO 문제 있으면 수정
+             filterChain.doFilter(request);
+             filterChain.reset();
+//            FilterManagement.getChain().doFilter(requestHeader);
 
             // 3. Data 영역만 따로 떼어냅니다.
-            JsonNode dataNode = rootNode.path("data");
 
             // 4. Type에 맞는 핸들러 선택
             Handler handler = HandlerFactory.getMessageHandler(requestHeader.type());
@@ -134,13 +117,6 @@ public class MessageDispatcher implements Executable {
             }
 
             // 5. 핸들러에게 'sessionId'와 'data 노드'를 넘겨서 처리 요청
-            // Object result = handler.execute(dataNode.textValue());
-
-            // 만약 클라가 {"data": {"userId": "test"}} 이렇게 객체를 보내면 Jackson의 textValue()는 문자열 노드가 아닐 경우 널 리턴
-            // 핸들러에 널이 전달되니까 로직 꼬이고 세션 필터랑 핸들러에서 에러 나는듯
-            // 객체 전체를 문자열로 넘기고 싶다면? dataNode.toString() 사용하거나 dataNode 자체를 핸들러에게 넘기기
-            // 만약 데이터가 단순 문자열이 아니라 제이슨 객체라면 toString()
-            // Object result = handler.execute(dataNode.isTextual() ? dataNode.textValue() : dataNode.toString());
             Object result = handler.execute(jsonBody);
 
             // 6. 결과 반환 (성공 응답 생성)
@@ -153,7 +129,7 @@ public class MessageDispatcher implements Executable {
                 return dispatchMapper.toError(errorDto);
             } catch (JsonProcessingException ex) {
                 log.error("[오류 메시지 디스패치] JSON 변환 중 치명적인 오류 발생");
-                throw new ObjectMappingFailException(ex.getMessage());
+                return "[오류 메시지 디스패치] JSON 변환 중 치명적인 오류 발생";
             }
 
             // TODO 수정사항 (재민)

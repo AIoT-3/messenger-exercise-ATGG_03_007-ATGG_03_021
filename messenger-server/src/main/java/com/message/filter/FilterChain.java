@@ -1,15 +1,22 @@
 package com.message.filter;
 
-import com.message.dto.HeaderDto;
+import com.message.dto.RequestDto;
+import com.message.filter.impl.LoginStateCheckFilter;
+import com.message.filter.impl.SessionFilter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.LinkedList;
 import java.util.List;
 
+@Slf4j
 public class FilterChain {
-    private List<Filter> filters = new LinkedList<>();
+    private final List<Filter> filters;
     private int index = 0;
 
-    // TODO 수정사항 (재민)
+    public FilterChain() {
+        filters = new LinkedList<>();
+    }
+
     // 주입받는 생성자 추가
     public FilterChain(List<Filter> filters) {
         this.filters = filters;
@@ -20,19 +27,32 @@ public class FilterChain {
      *
      * @param filter 추가할 필터
      */
-    public void addLastFilter(Filter filter) {
+    public FilterChain addLastFilter(Filter filter) {
         filters.addLast(filter);
+        return this;
     }
 
     /**
      * 필터 체인의 다음 필터를 실행합니다.
      *
-     * @param header 요청 헤더
+     * @param request 헤더
      */
-    public void doFilter(HeaderDto.RequestHeader header) {
+    public void doFilter(RequestDto request) {
+        log.debug("[Filter Chain] ChainSize: {}", filters.size());
         if (index < filters.size()) {
-            Filter filter = filters.get(index++);
-            filter.doFilter(header, this);
+            Filter filter = filters.get(index);
+            log.debug("[Filter Chain] index: {}, filterName: {}", index++, filter.getClass().getName());
+            filter.doFilter(request, this);
         }
+    }
+
+    public void reset(){
+        index = 0;
+    }
+
+    public static FilterChain getFilterChain() {
+        return new FilterChain()
+                .addLastFilter(new SessionFilter())
+                .addLastFilter(new LoginStateCheckFilter());
     }
 }

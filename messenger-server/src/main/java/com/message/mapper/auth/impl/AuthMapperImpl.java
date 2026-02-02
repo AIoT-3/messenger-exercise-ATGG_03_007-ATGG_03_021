@@ -3,11 +3,10 @@ package com.message.mapper.auth.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.message.dto.AuthDto;
+import com.message.dto.data.impl.AuthDto;
 import com.message.entity.UserEntity;
 import com.message.exception.custom.user.LoginInvalidRequestException;
 import com.message.mapper.auth.AuthMapper;
-import lombok.RequiredArgsConstructor;
 
 import java.util.Objects;
 
@@ -20,7 +19,6 @@ public class AuthMapperImpl implements AuthMapper {
             throw new LoginInvalidRequestException("Invalid username or password");
         }
 
-        // TODO 수정사항 (재민)
         // 전체 제이슨을 트리 구조로 읽음
         JsonNode rootNode = objectMapper.readTree(request);
 
@@ -28,17 +26,12 @@ public class AuthMapperImpl implements AuthMapper {
         JsonNode dataNode = rootNode.path("data");
 
         return objectMapper.treeToValue(dataNode, AuthDto.LoginRequest.class);
-
-        // return objectMapper.readValue(request, AuthDto.LoginRequest.class);
     }
 
     @Override
     public AuthDto.LoginResponse toLoginResponse(UserEntity user, String uuid) {
         return new AuthDto.LoginResponse(user.getUserId(), uuid, "Welcome!");
     }
-
-    // TODO 수정사항 (재민)
-    // 로그아웃 메서드 구현
 
     @Override
     public String toSessionId(String request) throws JsonProcessingException {

@@ -5,7 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.message.TypeManagement;
-import com.message.dto.AuthDto;
+import com.message.domain.AtomicLongIdManagement;
+import com.message.dto.data.impl.AuthDto;
 import com.message.dto.HeaderDto;
 import com.message.dto.ResponseDto;
 import com.message.exception.custom.mapper.ObjectMappingFailException;
@@ -41,10 +42,10 @@ public class LogoutResponseMapperImpl implements ResponseMapper {
                     TypeManagement.Auth.LOGOUT_SUCCESS,
                     true,
                     OffsetDateTime.now(),
-                    System.currentTimeMillis()
+                    AtomicLongIdManagement.getMessageIdSequenceIncreateAndGet()
             );
 
-            ResponseDto<AuthDto.LogoutResponse> successResponse = new ResponseDto<>(responseHeader, logoutResponse);
+            ResponseDto successResponse = new ResponseDto(responseHeader, logoutResponse);
             return mapper.writeValueAsString(successResponse);
         }
 
