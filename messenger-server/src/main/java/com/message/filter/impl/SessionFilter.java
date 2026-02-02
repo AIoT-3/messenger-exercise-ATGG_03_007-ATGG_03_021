@@ -30,16 +30,16 @@ public class SessionFilter implements Filter {
                 log.debug("[세션 필터] 이미 로그인된 상태에서 접근 시도 - sessionId: {}", s);
                 throw new AlreadyAuthenticatedException("이미 로그인된 상태입니다.");
             }
-            // 세션이 없으면 통과 -> 로그인 하러 감
-            if (header.type().equals(TypeManagement.Auth.LOGIN)){
-                chain.doFilter(request);
-            }
         } else {
             // 유효한 세션이 없으면 -> 접근 차단
             if (!hasValidSession) {
                 log.debug("[세션 필터] 인증되지 않은 접근 - type: {}", header.type());
                 throw new UnauthenticatedException("로그인이 필요한 서비스입니다.");
             }
+        }
+
+        if(chain != null){
+            chain.doFilter(request);
         }
     }
 }
