@@ -11,14 +11,17 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SessionManagement {
     private static final Map<String, String> sessions = new ConcurrentHashMap<>();
 
-    public static void addSessions(String userId, String uuid) {
+    // TODO 수정사항 (재민)
+    // 파라미터 순서 바꿈
+    public static void addSessions(String uuid, String userId) {
         //TODO 검증하셈
         if (Objects.isNull(userId) || Objects.isNull(uuid) || userId.isBlank() || uuid.isBlank()) {
-            log.error("[세션 추가] 값이 존재하지 않습니다");
+            log.error("[세션 등록] 값이 존재하지 않습니다");
             throw new BusinessException(ErrorManagement.Server.SERVER_DOWN, "서버 다운", 500);
         }
 
         sessions.put(uuid, userId);
+        log.info("[세션 등록 완료] User: {}, SessionId: {}", userId, uuid); // TODO 로그 찍었음
     }
 
     public static boolean isExisted(String uuid) {

@@ -63,7 +63,9 @@ public class DispatchMapperImpl implements DispatchMapper {
 
     @Override
     public String toError(ErrorDto response) throws JsonProcessingException {
-        HeaderDto.ResponseHeader responseHeader = new HeaderDto.ResponseHeader(TypeManagement.ERROR, false, OffsetDateTime.now());
+        // TODO 수정사항 (재민)
+        // messageId 필드 추가했으니 여기서도 System.currentTimeMillis() 추가해야함
+        HeaderDto.ResponseHeader responseHeader = new HeaderDto.ResponseHeader(TypeManagement.ERROR, false, OffsetDateTime.now(), System.currentTimeMillis());
         ResponseDto<ErrorDto> errorResponse = new ResponseDto<>(responseHeader, response);
         return mapper.writeValueAsString(errorResponse);
     }

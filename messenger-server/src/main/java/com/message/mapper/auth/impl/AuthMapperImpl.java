@@ -1,6 +1,7 @@
 package com.message.mapper.auth.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.message.dto.AuthDto;
 import com.message.entity.UserEntity;
@@ -19,11 +20,40 @@ public class AuthMapperImpl implements AuthMapper {
             throw new LoginInvalidRequestException("Invalid username or password");
         }
 
-        return objectMapper.readValue(request, AuthDto.LoginRequest.class);
+        // TODO 수정사항 (재민)
+        // 전체 제이슨을 트리 구조로 읽음
+        JsonNode rootNode = objectMapper.readTree(request);
+
+        // data 노드만 추출
+        JsonNode dataNode = rootNode.path("data");
+
+        return objectMapper.treeToValue(dataNode, AuthDto.LoginRequest.class);
+
+        // return objectMapper.readValue(request, AuthDto.LoginRequest.class);
     }
 
     @Override
     public AuthDto.LoginResponse toLoginResponse(UserEntity user, String uuid) {
         return new AuthDto.LoginResponse(user.getUserId(), uuid, "Welcome!");
+    }
+
+    // TODO 수정사항 (재민)
+    // 로그아웃 메서드 구현
+
+    @Override
+    public String toSessionId(String request) throws JsonProcessingException {
+        if(Objects.isNull(request) || request.isBlank()) {
+            throw new LoginInvalidRequestException("요청 본문이 비어있습니다.");
+        }
+
+        // 제이슨의 헤더 -> sessionId 경로 따라가서 값 가져옴
+        JsonNode rootNode = objectMapper.readTree(request);
+        return rootNode.path("header").path("sessionId").asText();
+    }
+
+    @Override
+    public AuthDto.LogoutResponse toLogoutResponse() {
+        // "message" : "로그아웃 되었습니다."
+        return new AuthDto.LogoutResponse("로그아웃 되었습니다.");
     }
 }

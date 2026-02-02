@@ -9,6 +9,12 @@ public class FilterChain {
     private List<Filter> filters = new LinkedList<>();
     private int index = 0;
 
+    // TODO 수정사항 (재민)
+    // 주입받는 생성자 추가
+    public FilterChain(List<Filter> filters) {
+        this.filters = filters;
+    }
+
     /**
      * 필터 체인에 필터를 추가합니다.
      *
