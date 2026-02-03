@@ -15,10 +15,7 @@ import com.message.mapper.dispatch.DispatchMapper;
 import com.message.mapper.dispatch.impl.DispatchMapperImpl;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -37,56 +34,82 @@ public class MessageDispatcher implements Executable {
     @Override
     public void execute() {
         try {
-//            Socket accept = serverSocket.accept();
+            InputStream is = socket.getInputStream();
+            OutputStream os = socket.getOutputStream();
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                 PrintWriter writer = new PrintWriter(socket.getOutputStream())) {
-                InetAddress inetAddress = socket.getInetAddress();
-                log.debug("ip: {}, port: {}", inetAddress.getAddress(), socket.getPort());
-
-                // 1. 첫 줄에서 message-length 읽기
-                String lengthLine = reader.readLine();
-                if (lengthLine == null || !lengthLine.startsWith("message-length:")) {
-                    throw new IllegalArgumentException("Invalid message format: missing message-length");
-                }
-                int length = Integer.parseInt(lengthLine.substring("message-length:".length()).trim());
-                log.debug("읽어야 할 본문 길이: {}", length);
-
-                // 본문 읽기 (바이트 단위가 아닌 문자 단위이므로)
-                StringBuilder bodyBuilder = new StringBuilder();
-                int charCode;
-
-                // 제이슨은 { 로 시작하므로 첫 문자가 나올 때까지 무시하거나 선언된 길이만큼 하나씩 읽기
-                for(int i = 0; i < length; i++) {
-                    charCode = reader.read();
-                    if(charCode == -1) {
+            // 연결을 유지하면서 메시지를 계속 처리
+            while (!socket.isClosed()) {
+                // 1. 헤더 읽기 (InputStream에서 직접 읽음)
+                ByteArrayOutputStream headerBuffer = new ByteArrayOutputStream();
+                int b;
+                // \n(10)이 나올 때까지 읽음
+                while ((b = is.read()) != -1) {
+                    if (b == '\n') {
                         break;
                     }
-                    bodyBuilder.append((char)charCode);
+                    headerBuffer.write(b);
                 }
 
-                String jsonBody = bodyBuilder.toString().trim();
+                // 연결 종료 감지
+                if (b == -1) {
+                    log.info("클라이언트 연결 종료");
+                    break;
+                }
+
+                String lengthLine = headerBuffer.toString(StandardCharsets.UTF_8).trim();
+                log.debug("lengthLine: {}", lengthLine);
+
+                // 빈 헤더는 무시하고 다음 메시지 대기
+                if (lengthLine.isEmpty()) {
+                    continue;
+                }
+
+                if (!lengthLine.startsWith("message-length:")) {
+                    log.warn("Invalid message format: {}", lengthLine);
+                    continue;
+                }
+
+                int length = Integer.parseInt(lengthLine.substring("message-length:".length()).trim());
+                log.debug("읽어야 할 본문 길이 (Bytes): {}", length);
+
+                // 2. 바이트 단위로 정확히 읽기
+                byte[] bodyBuffer = new byte[length];
+                int totalRead = 0;
+                while (totalRead < length) {
+                    int read = is.read(bodyBuffer, totalRead, length - totalRead);
+                    if (read == -1) break;
+                    totalRead += read;
+                }
+
+                String jsonBody = new String(bodyBuffer, StandardCharsets.UTF_8);
                 log.debug("수신된 jsonBody: {}", jsonBody);
 
-                if(jsonBody.isEmpty()) {
+                if (jsonBody.isEmpty()) {
                     log.error("데이터의 본문이 비어있습니다.");
-                    return;
+                    continue;
                 }
 
                 String result = dispatch(jsonBody);
                 log.debug("최종 전송할 응답 JSON: {}", result);
 
-                // 요구사항 명세서에 길이 헤더 (Length Line) 첫 줄에 보내라고 함
                 byte[] responseBytes = result.getBytes(StandardCharsets.UTF_8);
 
-                writer.println("message-length: " + responseBytes.length); // 길이 헤더 전송
-                writer.println(result); // 페이로드(제이슨 데이터) 전송
-                writer.flush();
-
+                // 헤더: message-length:길이\n 형식으로 전송 (클라이언트와 프로토콜 일치)
+                String header = "message-length:" + responseBytes.length + "\n";
+                os.write(header.getBytes(StandardCharsets.UTF_8)); // 헤더 전송
+                os.write(responseBytes); // 페이로드(제이슨 데이터) 전송
+                os.flush();
             }
         } catch (IOException e) {
             log.error("[스레드 에러] - {}", e.getMessage());
-            throw new RuntimeException(e);
+        } finally {
+            try {
+                if (!socket.isClosed()) {
+                    socket.close();
+                }
+            } catch (IOException e) {
+                log.error("소켓 종료 실패: {}", e.getMessage());
+            }
         }
     }
 

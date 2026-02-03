@@ -1,9 +1,17 @@
 package com.message;
 
-import com.message.controller.FrontController;
+import com.message.runnable.MessageClient;
 
 public class ClientMain {
     public static void main(String[] args) {
-        new FrontController().run();
+        MessageClient messageServer = new MessageClient();
+        Thread thread = new Thread(messageServer);
+        thread.start();
+
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

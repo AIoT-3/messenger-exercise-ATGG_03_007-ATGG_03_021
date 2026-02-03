@@ -1,14 +1,19 @@
 package com.message.command;
 
-import com.message.domain.HttpMethodAndType;
-import lombok.extern.slf4j.Slf4j;
+import com.message.subject.EventType;
 import org.reflections.Reflections;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
-@Slf4j
 public class CommandFactory {
-    private final static Map<HttpMethodAndType, Command> commandMap = new HashMap<>();
+    private static final Logger log = LoggerFactory.getLogger(CommandFactory.class);
+    private final static Map<String, Command> sendCommandMap = new ConcurrentHashMap<>();
+    private final static Map<String, Command> receiveCommandMap = new ConcurrentHashMap<>();
+    private final static Map<String, Command> localCommandMap = new ConcurrentHashMap<>();
 
     static {
         // "com.message.command" 패키지 내의 Command 하위 타입들을 검색합니다.
@@ -21,24 +26,33 @@ public class CommandFactory {
                 Command command = clazz.getDeclaredConstructor().newInstance();
                 log.debug("[CommandFactory] CommandFactory 초기화 - instance: {}", command.getClass().getName());
                 // 핸들러의 메서드 이름을 키로 하여 맵에 등록합니다.
-                commandMap.put(command.getHttpMethodAndType(), command);
+                if(command.getEventType().equals(EventType.SEND)){
+                    sendCommandMap.put(command.getType(), command);
+                } else if(command.getEventType().equals(EventType.RECV)){
+                    receiveCommandMap.put(command.getType(), command);
+                } else if(command.getEventType().equals(EventType.LOCAL)){
+                    localCommandMap.put(command.getType(), command);
+                } else {
+                    throw new IllegalArgumentException();
+                }
             } catch (Exception e) {
                 log.error("", e);
             }
         }
     }
 
-    public static Command getMessageHandler(HttpMethodAndType key) {
-        Command command = commandMap.get(key);
-        if (Objects.isNull(command)) {
-            log.error("[커멘드 요청] handler not found: {}", key);
-            throw new IllegalArgumentException("[커맨드 요청] 찾지마");
+    public static Command getCommand(EventType eventType, String type) {
+        Command command;
+        if(eventType.equals(EventType.SEND)){
+            command = sendCommandMap.get(type);
+        } else if(eventType.equals(EventType.RECV)){
+            command = receiveCommandMap.get(type);
+        } else if(eventType.equals(EventType.LOCAL)){
+            command = localCommandMap.get(type);
+        } else {
+            throw new IllegalArgumentException();
         }
-
         return command;
     }
 
-    public static List<HttpMethodAndType> getHttpMethodAndType() {
-        return commandMap.keySet().stream().toList();
-    }
 }

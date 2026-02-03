@@ -1,6 +1,6 @@
-package com.message.ui.action;
+package com.message.action;
 
-import com.message.ui.event.EventType;
+import com.message.subject.EventType;
 
 public interface MessageAction {
     String getMethod();

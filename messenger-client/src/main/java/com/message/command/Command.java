@@ -1,10 +1,10 @@
 package com.message.command;
 
-import com.message.domain.HttpMethodAndType;
-import com.message.dto.RequestDto;
-import com.message.dto.ResponseDto;
+import com.message.domain.MessageContent;
+import com.message.subject.EventType;
 
 public interface Command {
-    HttpMethodAndType getHttpMethodAndType();
-    String execute(RequestDto request, ResponseDto response);
+    String getType();
+    EventType getEventType();
+    Object execute(MessageContent.Message message);
 }
