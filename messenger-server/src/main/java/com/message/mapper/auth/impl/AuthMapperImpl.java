@@ -15,7 +15,7 @@ public class AuthMapperImpl implements AuthMapper {
 
     @Override
     public AuthDto.LoginRequest toLoginRequest(String request) throws JsonProcessingException {
-        if(Objects.isNull(request) || request.isBlank()){
+        if (Objects.isNull(request) || request.isBlank()) {
             throw new LoginInvalidRequestException("Invalid username or password");
         }
 
@@ -35,7 +35,7 @@ public class AuthMapperImpl implements AuthMapper {
 
     @Override
     public String toSessionId(String request) throws JsonProcessingException {
-        if(Objects.isNull(request) || request.isBlank()) {
+        if (Objects.isNull(request) || request.isBlank()) {
             throw new LoginInvalidRequestException("요청 본문이 비어있습니다.");
         }
 
@@ -50,3 +50,4 @@ public class AuthMapperImpl implements AuthMapper {
         return new AuthDto.LogoutResponse("로그아웃 되었습니다.");
     }
 }
+

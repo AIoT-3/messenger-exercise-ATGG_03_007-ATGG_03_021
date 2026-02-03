@@ -1,5 +1,6 @@
 package com.message.dto.data.impl;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.message.TypeManagement;
 import com.message.dto.data.MessageDataType;
 import com.message.dto.data.ResponseDataDto;
@@ -15,6 +16,7 @@ public class UserDto {
 
     @MessageDataType(TypeManagement.User.LIST_SUCCESS)
     public record UserListResponse(
+            @JsonValue
             List<UserInfo> users
     ) implements ResponseDataDto {
         @Override
