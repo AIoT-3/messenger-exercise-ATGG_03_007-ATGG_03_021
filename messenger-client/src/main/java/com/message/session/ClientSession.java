@@ -10,34 +10,60 @@ import com.message.dto.HeaderDto;
 import com.message.dto.RequestDto;
 import com.message.dto.ResponseDto;
 import com.message.dto.data.ResponseDataDto;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
-@Slf4j
 public class ClientSession {
-    @Setter
-    @Getter
+    private static final Logger log = LoggerFactory.getLogger(ClientSession.class);
+
     private static String sessionId;
-
-    @Setter
-    @Getter
     private static String userId;
-
-    @Setter
-    @Getter
     private static long currentRoomId = 1;
 
     private static Socket socket;
     private static PrintWriter out;
     private static BufferedReader in;
     private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+
+    public static String getSessionId() {
+        return sessionId;
+    }
+
+    public static void setSessionId(String sessionId) {
+        ClientSession.sessionId = sessionId;
+    }
+
+    public static String getUserId() {
+        return userId;
+    }
+
+    public static void setUserId(String userId) {
+        ClientSession.userId = userId;
+    }
+
+    public static long getCurrentRoomId() {
+        return currentRoomId;
+    }
+
+    public static void setCurrentRoomId(long currentRoomId) {
+        ClientSession.currentRoomId = currentRoomId;
+    }
+
+    public static Socket getSocket() {
+        return socket;
+    }
+
+    public static PrintWriter getOut() {
+        return out;
+    }
+
+    public static BufferedReader getIn() {
+        return in;
+    }
 
     public static boolean isAuthenticated() {
         return sessionId != null;
@@ -52,8 +78,9 @@ public class ClientSession {
         try {
             if (socket == null || socket.isClosed()) {
                 socket = new Socket(AppConfig.HOST, AppConfig.PORT);
-                out = new PrintWriter(socket.getOutputStream(), true);
-                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                // 인코딩을 UTF-8로 명시하여 한글 깨짐 방지 및 문자열 길이 일관성 확보
+                out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
+                in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
                 log.info("서버와 연결되었습니다 - {}:{}", AppConfig.HOST, AppConfig.PORT);
             }
         } catch (IOException e) {
@@ -96,7 +123,7 @@ public class ClientSession {
             String type = headerNode.get("type").asText();
 
             HeaderDto.ResponseHeader header = objectMapper.treeToValue(headerNode, HeaderDto.ResponseHeader.class);
-            
+
             Class<? extends ResponseDataDto> dataClass = TypeManagement.responseDataDataDtoClassMap.get(type);
             ResponseDataDto data = null;
             if (dataClass != null && rootNode.has("data")) {
@@ -108,5 +135,9 @@ public class ClientSession {
             log.error("응답을 받는데에 실패하였습니다.", e);
             throw new RuntimeException(e);
         }
+    }
+
+    public static OutputStream getOutputStream() throws IOException {
+        return socket.getOutputStream();
     }
 }

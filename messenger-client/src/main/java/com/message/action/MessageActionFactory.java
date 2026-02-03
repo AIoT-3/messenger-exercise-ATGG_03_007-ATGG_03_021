@@ -1,15 +1,16 @@
-package com.message.ui.action;
+package com.message.action;
 
-import com.message.command.Command;
-import com.message.domain.HttpMethodAndType;
-import com.message.ui.event.EventType;
-import lombok.extern.slf4j.Slf4j;
+import com.message.action.impl.RequestMessageAction;
+import com.message.action.impl.ResponseMessageAction;
+import com.message.subject.EventType;
 import org.reflections.Reflections;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-@Slf4j
 public class MessageActionFactory {
+    private static final Logger log = LoggerFactory.getLogger(MessageActionFactory.class);
     private final static Map<String, RequestMessageAction> requestMessageActionMap = new HashMap<>();
     private final static Map<String, ResponseMessageAction> responseMessageActionHashMap = new HashMap<>();
 
