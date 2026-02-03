@@ -11,5 +11,4 @@ public class ServerConfig {
     static {
         SkipSessionMethodNames.add("LOGIN");
     }
-
 }
