@@ -127,7 +127,6 @@ public class MessageDispatcher implements Executable {
 
             // TODO 문제 있으면 수정
              filterChain.doFilter(request);
-             filterChain.reset();
 //            FilterManagement.getChain().doFilter(requestHeader);
 
             // 3. Data 영역만 따로 떼어냅니다.

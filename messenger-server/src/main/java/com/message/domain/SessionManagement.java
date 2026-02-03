@@ -3,6 +3,8 @@ package com.message.domain;
 import com.message.exception.custom.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,4 +47,11 @@ public class SessionManagement {
 
         log.debug("[세션 삭제 성공] UserID: {}, UUID: {}", removedUserId, uuid);
     }
+
+    // TODO 수정사항 (재민)
+    // 유저 목록 조회
+    public static List<String> getAllUsers() {
+        return new ArrayList<>(sessions.values());
+    }
+
 }
