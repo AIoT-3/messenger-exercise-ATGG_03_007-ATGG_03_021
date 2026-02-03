@@ -145,9 +145,7 @@ public class MessageClientForm extends JFrame {
      */
     public static MessageClientForm showUI(Subject subject) {
         MessageClientForm form = new MessageClientForm(subject);
-        SwingUtilities.invokeLater(() -> {
-            form.setVisible(true);
-        });
+        form.setVisible(true);
         return form;
     }
 }

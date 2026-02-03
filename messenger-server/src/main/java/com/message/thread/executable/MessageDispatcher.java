@@ -34,9 +34,11 @@ public class MessageDispatcher implements Executable {
     @Override
     public void execute() {
         try {
-            try (InputStream is = socket.getInputStream();
-                 OutputStream os = socket.getOutputStream();) {
+            InputStream is = socket.getInputStream();
+            OutputStream os = socket.getOutputStream();
 
+            // 연결을 유지하면서 메시지를 계속 처리
+            while (!socket.isClosed()) {
                 // 1. 헤더 읽기 (InputStream에서 직접 읽음)
                 ByteArrayOutputStream headerBuffer = new ByteArrayOutputStream();
                 int b;
@@ -48,11 +50,23 @@ public class MessageDispatcher implements Executable {
                     headerBuffer.write(b);
                 }
 
+                // 연결 종료 감지
+                if (b == -1) {
+                    log.info("클라이언트 연결 종료");
+                    break;
+                }
+
                 String lengthLine = headerBuffer.toString(StandardCharsets.UTF_8).trim();
                 log.debug("lengthLine: {}", lengthLine);
 
-                if (lengthLine.isEmpty() || !lengthLine.startsWith("message-length:")) {
-                    throw new IllegalArgumentException("Invalid message format: missing message-length");
+                // 빈 헤더는 무시하고 다음 메시지 대기
+                if (lengthLine.isEmpty()) {
+                    continue;
+                }
+
+                if (!lengthLine.startsWith("message-length:")) {
+                    log.warn("Invalid message format: {}", lengthLine);
+                    continue;
                 }
 
                 int length = Integer.parseInt(lengthLine.substring("message-length:".length()).trim());
@@ -72,7 +86,7 @@ public class MessageDispatcher implements Executable {
 
                 if (jsonBody.isEmpty()) {
                     log.error("데이터의 본문이 비어있습니다.");
-                    return;
+                    continue;
                 }
 
                 String result = dispatch(jsonBody);
@@ -80,14 +94,22 @@ public class MessageDispatcher implements Executable {
 
                 byte[] responseBytes = result.getBytes(StandardCharsets.UTF_8);
 
-                String s = "message-length: " + responseBytes.length;
-                os.write(s.getBytes()); // 길이 헤더 전송
+                // 헤더: message-length:길이\n 형식으로 전송 (클라이언트와 프로토콜 일치)
+                String header = "message-length:" + responseBytes.length + "\n";
+                os.write(header.getBytes(StandardCharsets.UTF_8)); // 헤더 전송
                 os.write(responseBytes); // 페이로드(제이슨 데이터) 전송
                 os.flush();
             }
         } catch (IOException e) {
             log.error("[스레드 에러] - {}", e.getMessage());
-            throw new RuntimeException(e);
+        } finally {
+            try {
+                if (!socket.isClosed()) {
+                    socket.close();
+                }
+            } catch (IOException e) {
+                log.error("소켓 종료 실패: {}", e.getMessage());
+            }
         }
     }
 
