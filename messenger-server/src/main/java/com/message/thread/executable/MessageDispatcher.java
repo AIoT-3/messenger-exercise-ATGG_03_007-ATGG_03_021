@@ -39,7 +39,7 @@ public class MessageDispatcher implements Executable {
         try {
 //            Socket accept = serverSocket.accept();
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
                  PrintWriter writer = new PrintWriter(socket.getOutputStream())) {
                 InetAddress inetAddress = socket.getInetAddress();
                 log.debug("ip: {}, port: {}", inetAddress.getAddress(), socket.getPort());
@@ -102,9 +102,7 @@ public class MessageDispatcher implements Executable {
 
             RequestDto request = dispatchMapper.requestParser(requestHeader, requestData);
 
-            // TODO 문제 있으면 수정
              filterChain.doFilter(request);
-//            FilterManagement.getChain().doFilter(requestHeader);
 
             // 3. Data 영역만 따로 떼어냅니다.
 
@@ -115,8 +113,8 @@ public class MessageDispatcher implements Executable {
                 throw new HandlerNotFoundException("[알 수 없는 타입] type: " + requestHeader.type());
             }
 
-            // 5. 핸들러에게 'sessionId'와 'data 노드'를 넘겨서 처리 요청
-            Object result = handler.execute(jsonBody);
+            // 5. 핸들러에게 'header' 와 'data 노드'를 넘겨서 처리 요청
+            Object result = handler.execute(requestHeader, requestData);
 
             // 6. 결과 반환 (성공 응답 생성)
             return dispatchMapper.toResult(result);

@@ -2,6 +2,7 @@ package com.message.exception;
 
 import com.message.dto.data.impl.ErrorDto;
 import com.message.exception.custom.AlreadyExistException;
+import com.message.exception.custom.BusinessException;
 import com.message.exception.custom.InvalidRequestException;
 import com.message.exception.custom.NotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -17,9 +18,16 @@ public class GlobalExceptionHandler {
             return NotFoundExceptionHandler(nfe);
         } else if (e instanceof AlreadyExistException aee){
             return AlreadyExistExceptionHandler(aee);
+        } else if (e instanceof BusinessException be) {
+            return BusinessExceptionHandler(be);
         } else {
             return ExceptionHandler(e);
         }
+    }
+
+    private ErrorDto BusinessExceptionHandler(BusinessException be){
+        log.warn("[Business Exception] httpStatus: {}, code: {}, message: {}", be.getHttpStatus(), be.getCode(), be.getMessage());
+        return createErrorResponse(be.getCode(), be.getMessage());
     }
 
     private ErrorDto InvalidRequestExceptionHandler(InvalidRequestException ire){

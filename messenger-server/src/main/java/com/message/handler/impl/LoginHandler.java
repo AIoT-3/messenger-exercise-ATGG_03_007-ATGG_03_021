@@ -3,6 +3,8 @@ package com.message.handler.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.message.TypeManagement;
 import com.message.domain.SessionManagement;
+import com.message.dto.HeaderDto;
+import com.message.dto.data.RequestDataDto;
 import com.message.dto.data.impl.AuthDto;
 import com.message.entity.UserEntity;
 import com.message.exception.custom.mapper.ObjectMappingFailException;
@@ -10,7 +12,7 @@ import com.message.handler.Handler;
 import com.message.mapper.auth.AuthMapper;
 import com.message.mapper.auth.impl.AuthMapperImpl;
 import com.message.service.auth.AuthService;
-import com.message.service.auth.impl.AuthImplService;
+import com.message.service.auth.impl.AuthServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.UUID;
@@ -19,7 +21,7 @@ import java.util.UUID;
 public class LoginHandler implements Handler {
 
     private final AuthMapper authMapper = new AuthMapperImpl();
-    private final AuthService authService = new AuthImplService();
+    private final AuthService authService = new AuthServiceImpl();
 
     @Override
     public String getMethod() {
@@ -27,16 +29,10 @@ public class LoginHandler implements Handler {
     }
 
     @Override
-    public Object execute(String value) {
+    public Object execute(HeaderDto.RequestHeader header, RequestDataDto data) {
 
         // 요청 매핑
-        AuthDto.LoginRequest request;
-        try {
-            request = authMapper.toLoginRequest(value);
-        } catch (JsonProcessingException e) {
-            log.error("[로그인 요청] 매핑 실패 - message: {}", e.getMessage());
-            throw new ObjectMappingFailException("[로그인 요청] 매핑 실패");
-        }
+        AuthDto.LoginRequest request = (AuthDto.LoginRequest) data;
 
         // 서비스 로직 실행 (유저 검증)
         UserEntity user = authService.login(request);

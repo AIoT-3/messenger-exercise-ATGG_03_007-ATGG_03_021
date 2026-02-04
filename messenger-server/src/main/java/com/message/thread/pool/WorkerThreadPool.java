@@ -15,7 +15,6 @@ public class WorkerThreadPool {
 
     public WorkerThreadPool(Runnable runnable, int poolSize) {
         if (poolSize < 1 || Objects.isNull(runnable)) {
-            //TODO 수정하자..
             throw new IllegalArgumentException();
         }
 
@@ -27,24 +26,24 @@ public class WorkerThreadPool {
     }
 
     private void init() {
-        for (int i = 0; i < poolSize; i++){
+        for (int i = 0; i < poolSize; i++) {
             threads[i] = new Thread(runnable);
         }
     }
 
-    public synchronized void start(){
+    public synchronized void start() {
         // threads에 초가화된 모든 Thread를 start 합니다
         for (Thread thread : threads) {
             thread.start();
         }
     }
 
-    public synchronized void stop(){
-        for(Thread thread : threads){
+    public synchronized void stop() {
+        for (Thread thread : threads) {
             thread.interrupt();
         }
 
-        for(Thread thread : threads){
+        for (Thread thread : threads) {
             try {
                 thread.join();
             } catch (InterruptedException e) {

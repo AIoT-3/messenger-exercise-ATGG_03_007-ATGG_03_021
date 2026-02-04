@@ -48,4 +48,9 @@ public class ErrorManagement {
         public static final String SERVER_DOWN = "SERVER.SERVER_DOWN";
     }
 
+    // --- 요청 관련 (헤더나 데이터 비었을 때) ---
+    public static class Request {
+        public static final String IS_NULL = "REQUEST.IS_NULL";
+    }
+
 }

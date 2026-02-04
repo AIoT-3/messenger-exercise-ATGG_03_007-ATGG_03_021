@@ -48,8 +48,6 @@ public class SessionManagement {
         log.debug("[세션 삭제 성공] UserID: {}, UUID: {}", removedUserId, uuid);
     }
 
-    // TODO 수정사항 (재민)
-    // 유저 목록 조회
     public static List<String> getAllUsers() {
         return new ArrayList<>(sessions.values());
     }
