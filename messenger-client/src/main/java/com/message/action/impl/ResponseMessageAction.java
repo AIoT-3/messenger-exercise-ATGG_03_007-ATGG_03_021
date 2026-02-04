@@ -9,6 +9,8 @@ import com.message.dto.ResponseDto;
 import com.message.dto.data.impl.AuthDto;
 import com.message.dto.data.impl.ChatDto;
 import com.message.dto.data.impl.ErrorDto;
+import com.message.dto.data.impl.RoomDto;
+import com.message.dto.data.impl.UserDto;
 import com.message.subject.EventType;
 import com.message.ui.form.MessageClientForm;
 import org.slf4j.Logger;
@@ -73,6 +75,9 @@ public class ResponseMessageAction implements MessageAction {
             case TypeManagement.Auth.LOGOUT_SUCCESS -> handleLogoutSuccess(response);
             case TypeManagement.Chat.MESSAGE_SUCCESS -> handleChatMessageSuccess(response);
             case TypeManagement.Chat.PRIVATE_SUCCESS -> handlePrivateMessageSuccess(response);
+            case TypeManagement.Room.LIST_SUCCESS -> handleRoomListSuccess(response);
+            case TypeManagement.Room.CREATE_SUCCESS -> handleRoomCreateSuccess(response);
+            case TypeManagement.User.LIST_SUCCESS -> handleUserListSuccess(response);
             case TypeManagement.ERROR -> handleErrorResponse(response);
             default -> log.debug("처리되지 않은 응답 타입: {}", type);
         }
@@ -125,6 +130,36 @@ public class ResponseMessageAction implements MessageAction {
                 privateResponse.message(),
                 timestamp
             );
+        }
+    }
+
+    /**
+     * 채팅방 목록 응답 처리
+     */
+    private void handleRoomListSuccess(ResponseDto response) {
+        if (response.data() instanceof RoomDto.ListResponse listResponse) {
+            log.info("채팅방 목록 수신 - {} 개의 방", listResponse.rooms() != null ? listResponse.rooms().size() : 0);
+            form.updateRoomList(listResponse.rooms());
+        }
+    }
+
+    /**
+     * 채팅방 생성 성공 처리
+     */
+    private void handleRoomCreateSuccess(ResponseDto response) {
+        if (response.data() instanceof RoomDto.CreateResponse createResponse) {
+            log.info("채팅방 생성 성공 - roomId: {}, roomName: {}", createResponse.roomId(), createResponse.roomName());
+            form.onRoomCreated(createResponse.roomId(), createResponse.roomName());
+        }
+    }
+
+    /**
+     * 사용자 목록 응답 처리
+     */
+    private void handleUserListSuccess(ResponseDto response) {
+        if (response.data() instanceof UserDto.UserListResponse listResponse) {
+            log.info("사용자 목록 수신 - {} 명의 유저", listResponse.users() != null ? listResponse.users().size() : 0);
+            form.updateUserList(listResponse.users());
         }
     }
 
