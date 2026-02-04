@@ -1,5 +1,6 @@
 package com.message.dto.data.impl;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.message.TypeManagement;
 import com.message.dto.data.MessageDataType;
 import com.message.dto.data.RequestDataDto;
@@ -7,11 +8,13 @@ import com.message.dto.data.ResponseDataDto;
 
 import java.util.List;
 
+
+
 public class RoomDto {
 
     @MessageDataType(TypeManagement.Room.CREATE)
     public record CreateRequest(
-            String roomName
+            @JsonProperty("roomName") String roomName
     ) implements RequestDataDto {
         @Override
         public String getType() {
@@ -21,8 +24,8 @@ public class RoomDto {
 
     @MessageDataType(TypeManagement.Room.CREATE_SUCCESS)
     public record CreateResponse(
-            long roomId,
-            String roomName
+            @JsonProperty("roomId") long roomId,
+            @JsonProperty("roomName") String roomName
     ) implements ResponseDataDto {
         @Override
         public String getType() {
@@ -32,7 +35,7 @@ public class RoomDto {
 
     @MessageDataType(TypeManagement.Room.LIST_SUCCESS)
     public record ListResponse(
-            List<RoomSummary> rooms
+            @JsonProperty("rooms") List<RoomSummary> rooms
     ) implements ResponseDataDto {
         @Override
         public String getType() {
@@ -41,14 +44,14 @@ public class RoomDto {
     }
 
     public record RoomSummary(
-            long roomId,
-            String roomName,
-            int userCount
+            @JsonProperty("roomId") long roomId,
+            @JsonProperty("roomName") String roomName,
+            @JsonProperty("userCount") int userCount
     ) {}
 
     @MessageDataType(TypeManagement.Room.ENTER)
     public record EnterRequest(
-            long roomId
+            @JsonProperty("roomId") long roomId
     ) implements RequestDataDto {
         @Override
         public String getType() {
@@ -58,8 +61,8 @@ public class RoomDto {
 
     @MessageDataType(TypeManagement.Room.ENTER_SUCCESS)
     public record EnterResponse(
-            long roomId,
-            List<String> users
+            @JsonProperty("roomId") long roomId,
+            @JsonProperty("users") List<String> users
     ) implements ResponseDataDto {
         @Override
         public String getType() {
@@ -69,7 +72,7 @@ public class RoomDto {
 
     @MessageDataType(TypeManagement.Room.EXIT)
     public record ExitRequest(
-            long roomId
+            @JsonProperty("roomId") long roomId
     ) implements RequestDataDto {
         @Override
         public String getType() {
@@ -79,8 +82,8 @@ public class RoomDto {
 
     @MessageDataType(TypeManagement.Room.EXIT_SUCCESS)
     public record ExitResponse(
-            long roomId,
-            String message
+            @JsonProperty("roomId") long roomId,
+            @JsonProperty("message") String message
     ) implements ResponseDataDto {
         @Override
         public String getType() {

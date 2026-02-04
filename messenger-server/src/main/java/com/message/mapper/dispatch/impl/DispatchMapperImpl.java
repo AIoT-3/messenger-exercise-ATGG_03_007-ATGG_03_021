@@ -6,17 +6,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.message.TypeManagement;
 import com.message.domain.AtomicLongIdManagement;
+import com.message.domain.ErrorManagement;
 import com.message.dto.RequestDto;
 import com.message.dto.data.RequestDataDto;
 import com.message.dto.data.impl.ErrorDto;
 import com.message.dto.HeaderDto;
 import com.message.dto.ResponseDto;
+import com.message.exception.custom.BusinessException;
 import com.message.exception.custom.mapper.ObjectMappingFailException;
 import com.message.mapper.dispatch.DispatchMapper;
-import com.message.mapper.dispatch.ResponseMapper;
-import com.message.mapper.dispatch.ResponseMapperFactory;
+import com.message.mapper.response.ResponseMapper;
+import com.message.mapper.response.ResponseMapperFactory;
 import lombok.extern.slf4j.Slf4j;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
 import java.time.OffsetDateTime;
 import java.util.Objects;
 
@@ -57,16 +60,16 @@ public class DispatchMapperImpl implements DispatchMapper {
     @Override
     public RequestDataDto requestDataParser(String type, JsonNode rootNode) throws ObjectMappingFailException {
         Class<? extends RequestDataDto> clazz = TypeManagement.requestDataDtoClassMap.get(type);
-        if(Objects.isNull(clazz)){
+        if (Objects.isNull(clazz)) {
             return null;
         }
         log.debug("[data 파싱] 파싱할 클래스 확인 - {}", clazz.getName());
 
         try {
             JsonNode dataNode = rootNode.path("data");
-            log.debug("data 내용:{}", dataNode.textValue());
+            log.debug("data 내용: {}", dataNode.toString()); // 로그 볼 때 객체 내용 다 보려고
 
-            if(dataNode.isMissingNode() || dataNode.isNull()) {
+            if (dataNode.isMissingNode() || dataNode.isNull()) {
                 log.warn("[data 파싱] data 노드가 비어있습니다.");
                 throw new ObjectMappingFailException("[data 파싱] data 노드가 비어있습니다.");
             }
@@ -80,8 +83,14 @@ public class DispatchMapperImpl implements DispatchMapper {
 
     @Override
     public RequestDto requestParser(HeaderDto.RequestHeader header, RequestDataDto data) throws ObjectMappingFailException {
-        if(Objects.isNull(header) || Objects.isNull(data)){
-//            throw new
+        if (Objects.isNull(header)) {
+            log.error("[요청 파싱] 헤더가 비어있습니다");
+            throw new BusinessException(ErrorManagement.Request.IS_NULL, "헤더 빔", 400);
+        }
+
+        if (TypeManagement.requestDataDtoClassMap.containsKey(header.type()) && Objects.isNull(data)) {
+            log.error("[요청 파싱] 데이터가 비어있습니다.");
+            throw new BusinessException(ErrorManagement.Request.IS_NULL, "데이터 빔", 400);
         }
 
         return new RequestDto(header, data);
@@ -89,6 +98,7 @@ public class DispatchMapperImpl implements DispatchMapper {
 
     @Override
     public String toResult(Object result) throws ObjectMappingFailException {
+        log.debug("[매퍼 조회 시도] 클래스 이름: {}", result.getClass().getName());
         ResponseMapper responseMapper = ResponseMapperFactory.getResponseMapper(result.getClass().getName());
         try {
             return responseMapper.toResponse(result);

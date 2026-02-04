@@ -1,4 +1,4 @@
-package com.message.mapper.dispatch;
+package com.message.mapper.response;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 

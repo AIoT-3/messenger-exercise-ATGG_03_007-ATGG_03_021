@@ -34,17 +34,6 @@ public class AuthMapperImpl implements AuthMapper {
     }
 
     @Override
-    public String toSessionId(String request) throws JsonProcessingException {
-        if (Objects.isNull(request) || request.isBlank()) {
-            throw new LoginInvalidRequestException("요청 본문이 비어있습니다.");
-        }
-
-        // 제이슨의 헤더 -> sessionId 경로 따라가서 값 가져옴
-        JsonNode rootNode = objectMapper.readTree(request);
-        return rootNode.path("header").path("sessionId").asText();
-    }
-
-    @Override
     public AuthDto.LogoutResponse toLogoutResponse() {
         // "message" : "로그아웃 되었습니다."
         return new AuthDto.LogoutResponse("로그아웃 되었습니다.");

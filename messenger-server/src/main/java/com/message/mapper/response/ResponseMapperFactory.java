@@ -1,4 +1,4 @@
-package com.message.mapper.dispatch;
+package com.message.mapper.response;
 
 import lombok.extern.slf4j.Slf4j;
 import org.reflections.Reflections;
@@ -12,9 +12,9 @@ public class ResponseMapperFactory {
     private static final Map<String, ResponseMapper> responseMapperMap = new HashMap<>();
 
     static {
-        Reflections reflections = new Reflections("com.message.mapper.dispatch"); // 이상한 곳 스캔하고 있었음. 경로 수정함
+        Reflections reflections = new Reflections("com.message.mapper");
 
-        Set<Class<? extends ResponseMapper>> classes = reflections.getSubTypesOf(ResponseMapper.class);
+        Set<Class<? extends AbstractResponseMapper>> classes = reflections.getSubTypesOf(AbstractResponseMapper.class);
 
         for (Class<? extends ResponseMapper> clazz : classes) {
             try {
@@ -29,6 +29,6 @@ public class ResponseMapperFactory {
     }
 
     public static ResponseMapper getResponseMapper(String className){
-        return responseMapperMap.get(className);
+         return responseMapperMap.get(className);
     }
 }

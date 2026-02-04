@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Objects;
 
 @Slf4j
-public class AuthImplService implements AuthService {
+public class AuthServiceImpl implements AuthService {
 
     @Override
     public UserEntity login(AuthDto.LoginRequest request) {
