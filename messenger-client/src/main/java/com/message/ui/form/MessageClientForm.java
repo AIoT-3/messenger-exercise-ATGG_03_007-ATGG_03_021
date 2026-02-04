@@ -1,5 +1,7 @@
 package com.message.ui.form;
 
+import com.message.dto.data.impl.RoomDto;
+import com.message.dto.data.impl.UserDto;
 import com.message.session.ClientSession;
 import com.message.subject.Subject;
 import lombok.Getter;
@@ -8,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
 
 /**
  * 메신저 클라이언트의 메인 UI 폼
@@ -137,6 +140,33 @@ public class MessageClientForm extends JFrame {
     public void appendSystemMessage(String message) {
         SwingUtilities.invokeLater(() -> {
             chatPanel.appendSystemMessage(message);
+        });
+    }
+
+    /**
+     * 채팅방 목록 업데이트
+     */
+    public void updateRoomList(List<RoomDto.RoomSummary> rooms) {
+        SwingUtilities.invokeLater(() -> {
+            chatPanel.updateRoomList(rooms);
+        });
+    }
+
+    /**
+     * 유저 목록 업데이트
+     */
+    public void updateUserList(List<UserDto.UserInfo> users) {
+        SwingUtilities.invokeLater(() -> {
+            chatPanel.updateUserList(users);
+        });
+    }
+
+    /**
+     * 채팅방 생성 성공 처리
+     */
+    public void onRoomCreated(long roomId, String roomName) {
+        SwingUtilities.invokeLater(() -> {
+            chatPanel.onRoomCreated(roomId, roomName);
         });
     }
 
