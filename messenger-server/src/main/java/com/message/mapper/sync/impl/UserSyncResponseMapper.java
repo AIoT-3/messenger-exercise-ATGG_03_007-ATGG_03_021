@@ -8,10 +8,12 @@ import com.message.dto.ResponseDto;
 import com.message.dto.data.impl.SynchronizedDto;
 import com.message.dto.data.impl.UserDto;
 import com.message.mapper.sync.AbstractSyncResponseMapper;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 
+@Slf4j
 public class UserSyncResponseMapper extends AbstractSyncResponseMapper<UserDto.UserInfo> {
     @Override
     public String toSyncResponse(List<UserDto.UserInfo> list) {
@@ -26,6 +28,7 @@ public class UserSyncResponseMapper extends AbstractSyncResponseMapper<UserDto.U
         try {
             return mapper.writeValueAsString(responseDto);
         } catch (JsonProcessingException e) {
+            log.error("[유저 목록 동기화] 매핑 실패");
             throw new RuntimeException(e);
         }
     }

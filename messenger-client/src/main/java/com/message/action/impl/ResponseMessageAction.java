@@ -10,6 +10,7 @@ import com.message.dto.data.impl.AuthDto;
 import com.message.dto.data.impl.ChatDto;
 import com.message.dto.data.impl.ErrorDto;
 import com.message.dto.data.impl.RoomDto;
+import com.message.dto.data.impl.SynchronizedDto;
 import com.message.dto.data.impl.UserDto;
 import com.message.subject.EventType;
 import com.message.ui.form.MessageClientForm;
@@ -83,6 +84,8 @@ public class ResponseMessageAction implements MessageAction {
             case TypeManagement.Room.ENTER_SUCCESS -> handleRoomEnterSuccess(response);
             case TypeManagement.Room.EXIT_SUCCESS -> handleRoomExitSuccess(response);
             case TypeManagement.User.LIST_SUCCESS -> handleUserListSuccess(response);
+            case TypeManagement.Sync.USER -> handleUserSync(response);
+            case TypeManagement.Sync.ROOM -> handleRoomSync(response);
             case TypeManagement.ERROR -> handleErrorResponse(response);
             default -> log.debug("처리되지 않은 응답 타입: {}", type);
         }
@@ -228,6 +231,30 @@ public class ResponseMessageAction implements MessageAction {
                 privateResponse.message(),
                 timestamp
             );
+        }
+    }
+
+    /**
+     * 유저 목록 동기화 처리 (서버 푸시)
+     * 다른 유저 로그인/로그아웃 시 호출
+     */
+    private void handleUserSync(ResponseDto response) {
+        if (response.data() instanceof SynchronizedDto.UserSync userSync) {
+            log.info("유저 목록 동기화 수신 - {} 명의 유저", userSync.users() != null ? userSync.users().size() : 0);
+            form.updateUserList(userSync.users());
+            form.appendSystemMessage("유저 목록이 갱신되었습니다.");
+        }
+    }
+
+    /**
+     * 채팅방 목록 동기화 처리 (서버 푸시)
+     * 채팅방 생성/삭제 시 호출
+     */
+    private void handleRoomSync(ResponseDto response) {
+        if (response.data() instanceof RoomDto.ListResponse listResponse) {
+            log.info("채팅방 목록 동기화 수신 - {} 개의 방", listResponse.rooms() != null ? listResponse.rooms().size() : 0);
+            form.updateRoomList(listResponse.rooms());
+            form.appendSystemMessage("채팅방 목록이 갱신되었습니다.");
         }
     }
 

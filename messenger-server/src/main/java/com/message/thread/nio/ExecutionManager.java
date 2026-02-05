@@ -29,18 +29,21 @@ public class ExecutionManager {
             JsonNode rootNode = dispatchMapper.readTree(json);
 
             // 2. Header 영역에서 필요한 정보 추출
+            log.debug("[디스 패치] 요청 파싱");
             HeaderDto.RequestHeader requestHeader = dispatchMapper.requestHeaderParser(rootNode);
 
             RequestDataDto requestData = dispatchMapper.requestDataParser(requestHeader.type(), rootNode);
 
             RequestDto request = dispatchMapper.requestParser(requestHeader, requestData);
 
+            log.debug("[디스 패치] 필터 시작");
             filterChain.doFilter(request);
 
             // 2. 해당 타입에 맞는 스레드 풀 선택
             ExecutorService pool = ThreadPoolFactory.getThreadPool(requestHeader.type());
 
             // 3. 스레드 풀에 작업 위임 (비동기)
+            log.debug("[디스 패치] 스레드 풀 작업 위임");
             pool.submit(() -> new HandlerExecutable(channel, selector, requestHeader, requestData).execute());
 
         } catch (Exception e) {

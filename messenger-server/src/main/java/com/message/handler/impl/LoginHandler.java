@@ -60,7 +60,13 @@ public class LoginHandler implements Handler {
     }
 
     private void sendSynchronizedUsers(List<String> sessionIds) {
+        if(sessionIds.isEmpty()){
+            log.debug("동기화할 유저가 없습니다.");
+            return;
+        }
+        log.debug("[로그인 성공] 유저 목록 새로고침 시작");
         String loginSuccessMessage = userSyncResponseMapper.toSyncResponse(userService.getUserList());
+        log.debug("[로그인 성공] 모든 접속중인 유저 동기화 시도");
         SocketManagement.sendSynchronizedMessage(sessionIds, loginSuccessMessage);
     }
 }

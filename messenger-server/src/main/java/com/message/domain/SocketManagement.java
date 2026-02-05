@@ -13,6 +13,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -116,14 +118,33 @@ public class SocketManagement {
     }
 
     public static void sendSynchronizedMessage(List<String> sessionIds, String message){
+        log.debug("[동기화 메시지] 송신 메시지 : {}", message);
         List<Socket> socketList = getSocketList(sessionIds);
+        log.debug("[동기화 메시지] 동기화 할 유저수 : {}", socketList.size());
+        byte[] header = "%s%s%n".formatted(AppConfig.MESSAGE_LENGTH, message.getBytes(StandardCharsets.UTF_8).length).getBytes(StandardCharsets.UTF_8);
+        byte[] body = message.getBytes(StandardCharsets.UTF_8);
         socketList.forEach(s -> {
+            log.debug("[소캣 통신] 소캣 종류:{}", Objects.isNull(s.getChannel()) ? "일반 소캣" : "채널 소캣");
             try {
-                OutputStream out = s.getOutputStream();
-                out.write("%s%s%n".formatted(AppConfig.MESSAGE_LENGTH, message.getBytes(StandardCharsets.UTF_8).length).getBytes(StandardCharsets.UTF_8));
-                out.write(message.getBytes(StandardCharsets.UTF_8));
-                out.flush();
+                if(Objects.nonNull(s.getChannel())){
+                    // NIO 채널 기반 소켓인 경우 (비블로킹/블로킹 모두 대응)
+                    SocketChannel sc = s.getChannel();
+                    ByteBuffer combined = ByteBuffer.allocate(header.length + body.length);
+                    combined.put(header);
+                    combined.put(body);
+                    combined.flip();
+
+                    while (combined.hasRemaining()) {
+                        sc.write(combined); // 비블로킹 모드에서도 안전하게 전송
+                    }
+                } else {
+                    OutputStream out = s.getOutputStream();
+                    out.write(header);
+                    out.write(body);
+                    out.flush();
+                }
             } catch (IOException e) {
+                log.error("[동기화 메시지] 메시지 전송 실패 - message:{}", e.getMessage());
                 throw new RuntimeException(e);
             }
         });

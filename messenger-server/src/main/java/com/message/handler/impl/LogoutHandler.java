@@ -48,6 +48,10 @@ public class LogoutHandler implements Handler {
     }
 
     private void sendSynchronizedUsers(List<String> sessionIds) {
+        if(sessionIds.isEmpty()){
+            log.debug("동기화할 유저가 없습니다.");
+            return;
+        }
         String loginSuccessMessage = userSyncResponseMapper.toSyncResponse(userService.getUserList());
         SocketManagement.sendSynchronizedMessage(sessionIds, loginSuccessMessage);
     }
