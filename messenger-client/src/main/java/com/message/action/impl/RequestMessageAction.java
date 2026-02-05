@@ -1,13 +1,13 @@
 package com.message.action.impl;
 
 import com.message.action.MessageAction;
+import com.message.cofig.AppConfig;
 import com.message.session.ClientSession;
 import com.message.subject.EventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -45,7 +45,7 @@ public class RequestMessageAction implements MessageAction {
                 byte[] bodyBytes = jsonMessage.getBytes(StandardCharsets.UTF_8);
 
                 // 2. 헤더 생성 (끝에 \n을 붙여 서버의 readLine()과 호환)
-                String header = "message-length:" + bodyBytes.length + "\n";
+                String header = AppConfig.MESSAGE_LENGTH + bodyBytes.length + "\n";
                 byte[] headerBytes = header.getBytes(StandardCharsets.UTF_8);
 
                 // 3. 전송

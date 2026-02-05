@@ -50,11 +50,15 @@ public class SocketManagement {
                 case TypeManagement.Auth.LOGIN -> {
                     if (o instanceof AuthDto.LoginResponse response) {
                         addSocket(response.sessionId(), socket);
+                    } else {
+                        throw new IllegalArgumentException();
                     }
                 }
                 case TypeManagement.Auth.LOGOUT -> {
                     if (o instanceof HeaderDto.RequestHeader header) {
                         removeSocket(header.sessionId());
+                    } else {
+                        throw new IllegalArgumentException();
                     }
                 }
             }
@@ -72,8 +76,8 @@ public class SocketManagement {
 
     public static List<Socket> getSocketList(List<String> sessionIdList) {
         if (Objects.isNull(sessionIdList) || sessionIdList.isEmpty()) {
-            // return Collections.emptyList();
-            throw new BusinessException(ErrorManagement.Session.NOT_FOUND, "존재하지 않는 세션아이디 리스트입니다.", 404);
+             return Collections.emptyList(); // TODO 이렇게 빈 리스트 반환하는게 낫지 않나?
+//            throw new BusinessException(ErrorManagement.Session.NOT_FOUND, "존재하지 않는 세션아이디 리스트입니다.", 404);
         }
 
         Set<String> sessionIdSet = new HashSet<>(sessionIdList);
@@ -81,12 +85,6 @@ public class SocketManagement {
                 .filter(s -> sessionIdSet.contains(s.getKey()))
                 .map(Map.Entry::getValue)
                 .toList();
-
-//        return sessionIdList.stream()
-//                .map(socketMap::get) // 세션아이디로 소켓 찾기
-//                .filter(Objects::nonNull) // 맵에 없는 경우 제외
-//                .filter(s -> !s.isClosed()) // 닫힌 소켓 제외
-//                .toList();
     }
 
     public static void sendMessage(String sessionId, Object data) {
