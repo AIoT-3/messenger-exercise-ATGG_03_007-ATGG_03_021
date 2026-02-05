@@ -1,6 +1,8 @@
 package com.message.ui.form;
 
 import com.message.TypeManagement;
+import com.message.dto.data.impl.RoomDto;
+import com.message.dto.data.impl.UserDto;
 import com.message.session.ClientSession;
 import com.message.subject.Subject;
 import org.slf4j.Logger;
@@ -8,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.TitledBorder;
 import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -15,6 +18,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
  * 채팅 화면 패널
@@ -31,6 +35,12 @@ public class ChatPanel extends JPanel {
     private JButton logoutButton;
     private JLabel userInfoLabel;
     private StyledDocument chatDocument;
+
+    // 사이드바 컴포넌트
+    private JList<RoomDto.RoomSummary> roomList;
+    private DefaultListModel<RoomDto.RoomSummary> roomListModel;
+    private JList<UserDto.UserInfo> userList;
+    private DefaultListModel<UserDto.UserInfo> userListModel;
 
     // 스타일 정의
     private Style systemStyle;
@@ -54,9 +64,9 @@ public class ChatPanel extends JPanel {
         JPanel headerPanel = createHeaderPanel();
         add(headerPanel, BorderLayout.NORTH);
 
-        // 채팅 영역
-        JScrollPane chatScrollPane = createChatArea();
-        add(chatScrollPane, BorderLayout.CENTER);
+        // 중앙: 사이드바 + 채팅 영역
+        JSplitPane splitPane = createMainArea();
+        add(splitPane, BorderLayout.CENTER);
 
         // 하단 메시지 입력 영역
         JPanel inputPanel = createInputPanel();
@@ -86,6 +96,140 @@ public class ChatPanel extends JPanel {
 
         panel.add(userInfoLabel, BorderLayout.WEST);
         panel.add(logoutButton, BorderLayout.EAST);
+
+        return panel;
+    }
+
+    private JSplitPane createMainArea() {
+        // 왼쪽 사이드바
+        JPanel sidebarPanel = createSidebarPanel();
+
+        // 오른쪽 채팅 영역
+        JScrollPane chatScrollPane = createChatArea();
+
+        // 분할 패널
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sidebarPanel, chatScrollPane);
+        splitPane.setDividerLocation(180);
+        splitPane.setDividerSize(3);
+        splitPane.setContinuousLayout(true);
+
+        return splitPane;
+    }
+
+    private JPanel createSidebarPanel() {
+        JPanel sidebar = new JPanel(new GridLayout(2, 1, 0, 5));
+        sidebar.setBackground(new Color(245, 245, 245));
+        sidebar.setBorder(new EmptyBorder(5, 5, 5, 5));
+
+        // 채팅방 목록 패널
+        JPanel roomPanel = createRoomListPanel();
+        sidebar.add(roomPanel);
+
+        // 접속 유저 목록 패널
+        JPanel userPanel = createUserListPanel();
+        sidebar.add(userPanel);
+
+        return sidebar;
+    }
+
+    private JPanel createRoomListPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200)),
+            "채팅방",
+            TitledBorder.LEFT,
+            TitledBorder.TOP,
+            new Font("맑은 고딕", Font.BOLD, 12),
+            new Color(51, 122, 183)
+        ));
+
+        // 채팅방 목록
+        roomListModel = new DefaultListModel<>();
+        roomList = new JList<>(roomListModel);
+        roomList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        roomList.setCellRenderer(new RoomListCellRenderer());
+        roomList.setFont(new Font("맑은 고딕", Font.PLAIN, 12));
+
+        JScrollPane scrollPane = new JScrollPane(roomList);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+
+        // 채팅방 생성 버튼
+        JButton createRoomButton = new JButton("+ 방 만들기");
+        createRoomButton.setFont(new Font("맑은 고딕", Font.PLAIN, 11));
+        createRoomButton.setBackground(new Color(51, 122, 183));
+        createRoomButton.setForeground(Color.WHITE);
+        createRoomButton.setFocusPainted(false);
+        createRoomButton.setBorderPainted(false);
+        createRoomButton.setOpaque(true);
+        createRoomButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        createRoomButton.addActionListener(e -> showCreateRoomDialog());
+
+        panel.add(scrollPane, BorderLayout.CENTER);
+        panel.add(createRoomButton, BorderLayout.SOUTH);
+
+        return panel;
+    }
+
+    /**
+     * 채팅방 생성 다이얼로그 표시
+     */
+    private void showCreateRoomDialog() {
+        String roomName = JOptionPane.showInputDialog(
+            parentForm,
+            "채팅방 이름을 입력하세요:",
+            "채팅방 생성",
+            JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (roomName != null && !roomName.trim().isEmpty()) {
+            createRoom(roomName.trim());
+        }
+    }
+
+    /**
+     * 채팅방 생성 요청
+     */
+    private void createRoom(String roomName) {
+        log.debug("채팅방 생성 요청 - roomName: {}", roomName);
+
+        try {
+            String createCommand = TypeManagement.Room.CREATE + " " + roomName;
+            subject.sendMessage(createCommand);
+        } catch (Exception e) {
+            log.error("채팅방 생성 요청 실패", e);
+            JOptionPane.showMessageDialog(
+                parentForm,
+                "채팅방 생성에 실패했습니다.",
+                "오류",
+                JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    private JPanel createUserListPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200)),
+            "접속 유저",
+            TitledBorder.LEFT,
+            TitledBorder.TOP,
+            new Font("맑은 고딕", Font.BOLD, 12),
+            new Color(46, 204, 113)
+        ));
+
+        // 유저 목록
+        userListModel = new DefaultListModel<>();
+        userList = new JList<>(userListModel);
+        userList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        userList.setCellRenderer(new UserListCellRenderer());
+        userList.setFont(new Font("맑은 고딕", Font.PLAIN, 12));
+
+        JScrollPane scrollPane = new JScrollPane(userList);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+
+        panel.add(scrollPane, BorderLayout.CENTER);
 
         return panel;
     }
@@ -270,6 +414,71 @@ public class ChatPanel extends JPanel {
             userInfoLabel.setText(userId + "님, 환영합니다!");
         }
         messageField.requestFocus();
+
+        // 서버에 채팅방 목록 및 유저 목록 요청
+        requestInitialData();
+    }
+
+    /**
+     * 서버에 초기 데이터 요청 (채팅방 목록, 유저 목록)
+     */
+    private void requestInitialData() {
+        log.debug("초기 데이터 요청 - 채팅방 목록, 유저 목록");
+
+        try {
+            // 채팅방 목록 요청
+            subject.sendMessage(TypeManagement.Room.LIST);
+
+            // 유저 목록 요청
+            subject.sendMessage(TypeManagement.User.LIST);
+        } catch (Exception e) {
+            log.error("초기 데이터 요청 실패", e);
+        }
+    }
+
+    /**
+     * 채팅방 목록 업데이트
+     */
+    public void updateRoomList(List<RoomDto.RoomSummary> rooms) {
+        SwingUtilities.invokeLater(() -> {
+            roomListModel.clear();
+            if (rooms != null) {
+                for (RoomDto.RoomSummary room : rooms) {
+                    roomListModel.addElement(room);
+                }
+            }
+            log.debug("채팅방 목록 업데이트 완료 - {} 개의 방", rooms != null ? rooms.size() : 0);
+        });
+    }
+
+    /**
+     * 유저 목록 업데이트
+     */
+    public void updateUserList(List<UserDto.UserInfo> users) {
+        SwingUtilities.invokeLater(() -> {
+            userListModel.clear();
+            if (users != null) {
+                for (UserDto.UserInfo user : users) {
+                    userListModel.addElement(user);
+                }
+            }
+            log.debug("유저 목록 업데이트 완료 - {} 명의 유저", users != null ? users.size() : 0);
+        });
+    }
+
+    /**
+     * 채팅방 생성 성공 처리
+     */
+    public void onRoomCreated(long roomId, String roomName) {
+        SwingUtilities.invokeLater(() -> {
+            appendSystemMessage("채팅방 '" + roomName + "'이(가) 생성되었습니다.");
+            // 채팅방 목록 새로고침 요청
+            try {
+                subject.sendMessage(TypeManagement.Room.LIST);
+            } catch (Exception e) {
+                log.error("채팅방 목록 새로고침 실패", e);
+            }
+        });
     }
 
     /**
@@ -285,5 +494,50 @@ public class ChatPanel extends JPanel {
 
     private String getCurrentTimestamp() {
         return LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+    }
+
+    /**
+     * 채팅방 목록 셀 렌더러
+     */
+    private static class RoomListCellRenderer extends DefaultListCellRenderer {
+        @Override
+        public Component getListCellRendererComponent(JList<?> list, Object value,
+                int index, boolean isSelected, boolean cellHasFocus) {
+
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+
+            if (value instanceof RoomDto.RoomSummary room) {
+                setText(String.format("%s (%d명)", room.roomName(), room.userCount()));
+                setIcon(null);
+            }
+
+            setBorder(new EmptyBorder(5, 8, 5, 8));
+            return this;
+        }
+    }
+
+    /**
+     * 유저 목록 셀 렌더러
+     */
+    private static class UserListCellRenderer extends DefaultListCellRenderer {
+        @Override
+        public Component getListCellRendererComponent(JList<?> list, Object value,
+                int index, boolean isSelected, boolean cellHasFocus) {
+
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+
+            if (value instanceof UserDto.UserInfo user) {
+                String status = user.online() ? "온라인" : "오프라인";
+                setText(String.format("%s (%s)", user.name(), status));
+
+                // 온라인 상태에 따라 색상 변경
+                if (!isSelected) {
+                    setForeground(user.online() ? new Color(46, 125, 50) : Color.GRAY);
+                }
+            }
+
+            setBorder(new EmptyBorder(5, 8, 5, 8));
+            return this;
+        }
     }
 }

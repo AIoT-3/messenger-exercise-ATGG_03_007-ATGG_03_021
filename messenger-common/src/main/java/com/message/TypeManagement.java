@@ -34,10 +34,14 @@ public class TypeManagement {
         // 메시지 전송
         public static final String MESSAGE = "CHAT-MESSAGE";
         public static final String MESSAGE_SUCCESS = "CHAT-MESSAGE-SUCCESS";
-        
+        // 응답이랑 푸쉬 차이 주기 위해 만듬
+        public static final String MESSAGE_RECEIVE = "CHAT-MESSAGE-RECEIVE";
+
+        // 응답이랑 푸쉬 차이 주기 위해 만듬
         // 귓속말
         public static final String PRIVATE = "PRIVATE-MESSAGE";
         public static final String PRIVATE_SUCCESS = "PRIVATE-MESSAGE-SUCCESS";
+        public static final String PRIVATE_MESSAGE_RECEIVE = "PRIVATE-MESSAGE-RECEIVE";
         
         // 메시지 기록
         public static final String HISTORY = "CHAT-MESSAGE-HISTORY";

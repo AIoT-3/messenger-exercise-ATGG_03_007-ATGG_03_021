@@ -2,6 +2,10 @@ package com.message.thread.executable;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.message.cofig.AppConfig;
+import com.message.TypeManagement;
+import com.message.domain.SessionManagement;
+import com.message.domain.SocketManagement;
 import com.message.dto.HeaderDto;
 import com.message.dto.RequestDto;
 import com.message.dto.data.RequestDataDto;
@@ -15,9 +19,13 @@ import com.message.mapper.dispatch.DispatchMapper;
 import com.message.mapper.dispatch.impl.DispatchMapperImpl;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 
 @Slf4j
 public class MessageDispatcher implements Executable {
@@ -25,6 +33,9 @@ public class MessageDispatcher implements Executable {
     private final GlobalExceptionHandler globalExceptionHandler = new GlobalExceptionHandler();
     private final Socket socket;
     private final FilterChain filterChain = FilterChain.getFilterChain();
+
+    // 세션 아이디 보관할 변수 추가함. execute()의 finally에서 removeSocket 호출하기 위해
+    private String currentSessionId;
 
     public MessageDispatcher(Socket socket) {
         this.socket = socket;
@@ -56,19 +67,19 @@ public class MessageDispatcher implements Executable {
                 }
 
                 String lengthLine = headerBuffer.toString(StandardCharsets.UTF_8).trim();
-                log.debug("lengthLine: {}", lengthLine);
+                log.debug("{} {}", AppConfig.MESSAGE_LENGTH, lengthLine);
 
                 // 빈 헤더는 무시하고 다음 메시지 대기
                 if (lengthLine.isEmpty()) {
                     continue;
                 }
 
-                if (!lengthLine.startsWith("message-length:")) {
+                if (!lengthLine.startsWith(AppConfig.MESSAGE_LENGTH)) {
                     log.warn("Invalid message format: {}", lengthLine);
                     continue;
                 }
 
-                int length = Integer.parseInt(lengthLine.substring("message-length:".length()).trim());
+                int length = Integer.parseInt(lengthLine.substring(AppConfig.MESSAGE_LENGTH.length()).trim());
                 log.debug("읽어야 할 본문 길이 (Bytes): {}", length);
 
                 // 2. 바이트 단위로 정확히 읽기
@@ -94,7 +105,7 @@ public class MessageDispatcher implements Executable {
                 byte[] responseBytes = result.getBytes(StandardCharsets.UTF_8);
 
                 // 헤더: message-length:길이\n 형식으로 전송 (클라이언트와 프로토콜 일치)
-                String header = "message-length:" + responseBytes.length + "\n";
+                String header = AppConfig.MESSAGE_LENGTH + responseBytes.length + "\n";
                 os.write(header.getBytes(StandardCharsets.UTF_8)); // 헤더 전송
                 os.write(responseBytes); // 페이로드(제이슨 데이터) 전송
                 os.flush();
@@ -105,6 +116,13 @@ public class MessageDispatcher implements Executable {
             try {
                 if (!socket.isClosed()) {
                     socket.close();
+                }
+                SocketManagement.removeSocket(socket);
+                log.debug("[소캣 정리] 클라이언트 종료로 인한 소켓 제거");
+
+                if (Objects.nonNull(currentSessionId)) {
+                    SessionManagement.deleteSession(currentSessionId);
+                    log.debug("[세션 정리] 클라이언트 종료로 인한 세션 제거 - sessionId: {}", currentSessionId);
                 }
             } catch (IOException e) {
                 log.error("소켓 종료 실패: {}", e.getMessage());
@@ -120,11 +138,13 @@ public class MessageDispatcher implements Executable {
             // 2. Header 영역에서 필요한 정보 추출
             HeaderDto.RequestHeader requestHeader = dispatchMapper.requestHeaderParser(rootNode);
 
+            this.currentSessionId = requestHeader.sessionId();
+
             RequestDataDto requestData = dispatchMapper.requestDataParser(requestHeader.type(), rootNode);
 
             RequestDto request = dispatchMapper.requestParser(requestHeader, requestData);
 
-             filterChain.doFilter(request);
+            filterChain.doFilter(request);
 
             // 3. Data 영역만 따로 떼어냅니다.
 
@@ -138,6 +158,14 @@ public class MessageDispatcher implements Executable {
             // 5. 핸들러에게 'header' 와 'data 노드'를 넘겨서 처리 요청
             Object result = handler.execute(requestHeader, requestData);
 
+            // 결과가 있을 때만 진행하도록 수정
+
+            if (requestHeader.type().equals(TypeManagement.Auth.LOGIN)) {
+                SocketManagement.checkSocket(requestHeader.type(), result, socket);
+            } else if (requestHeader.type().equals(TypeManagement.Auth.LOGOUT)) {
+                SocketManagement.checkSocket(requestHeader.type(), requestHeader, socket);
+            }
+
             // 6. 결과 반환 (성공 응답 생성)
             return dispatchMapper.toResult(result);
 
@@ -150,25 +178,6 @@ public class MessageDispatcher implements Executable {
                 log.error("[오류 메시지 디스패치] JSON 변환 중 치명적인 오류 발생");
                 return "[오류 메시지 디스패치] JSON 변환 중 치명적인 오류 발생";
             }
-
-            // TODO 수정사항 (재민)
-            // finally 블록에서 소켓 클로즈 먼저 해버려서, 그 뒤에 나오는 writer.println(result)는 이미 닫힌 문에다 프린트 하는 격이 됨
-            // 이미 execute() 메서드 시작 부분에 try-with-resources 구문 있으니, 이 블록 끝나면 알아서 writer 닫고 연결된 소켓도 닫아줌
-//        } finally {
-//            try {
-//                if (Objects.nonNull(socket)) {
-//                    socket.close();
-//                    log.debug("client 정상종료");
-//
-//                    //client제거
-//                    if (SessionManagement.isExisted("id")) {
-//                        SessionManagement.deleteSession("id");
-//                    }
-//                }
-//            } catch (IOException e) {
-//                log.error("error-client-close : {}", e.getMessage(), e);
-//            }
-//        }
         }
     }
 }
