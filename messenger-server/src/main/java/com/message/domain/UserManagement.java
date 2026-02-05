@@ -14,7 +14,10 @@ public class UserManagement {
 
     static {
         UserEntity user = new UserEntity("marco", "마르코", "nhnacademy123");
+        UserEntity user2 = new UserEntity("jaemin", "재민", "1234");
+
         users.put(user.getUserId(), user);
+        users.put(user2.getUserId(), user2);
     }
 
     private UserManagement() {
