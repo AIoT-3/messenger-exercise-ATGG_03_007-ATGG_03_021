@@ -1,7 +1,7 @@
 package com.message.cofig;
 
 public class AppConfig {
-    public static final String HOST = "localhost";
+    public static final String HOST = "localHost";
     public static final int PORT = 8080;
     public static final String PROTOCOL = "http";
 

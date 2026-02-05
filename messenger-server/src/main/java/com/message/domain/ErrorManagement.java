@@ -17,6 +17,9 @@ public class ErrorManagement {
         public static final String NOT_FOUND = "USER.NOT_FOUND";
         /** 이미 존재하는 사용자 아이디로 생성 시도 */
         public static final String ALREADY_EXISTS = "USER.ALREADY_EXISTS";
+
+        // TODO 구현사항
+        public static final String INVALID_INPUT = "USER.INVALID_INPUT";
     }
 
     // --- 채팅방 (Room) ---

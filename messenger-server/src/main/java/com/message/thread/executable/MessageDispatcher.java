@@ -2,6 +2,8 @@ package com.message.thread.executable;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.message.TypeManagement;
+import com.message.domain.SocketManagement;
 import com.message.dto.HeaderDto;
 import com.message.dto.RequestDto;
 import com.message.dto.data.RequestDataDto;
@@ -18,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 
 @Slf4j
 public class MessageDispatcher implements Executable {
@@ -25,6 +28,10 @@ public class MessageDispatcher implements Executable {
     private final GlobalExceptionHandler globalExceptionHandler = new GlobalExceptionHandler();
     private final Socket socket;
     private final FilterChain filterChain = FilterChain.getFilterChain();
+
+    // TODO 수정사항 (재민)
+    // 세션 아이디 보관할 변수 추가함. execute()의 finally에서 removeSocket 호출하기 위해
+    private String currentSessionId;
 
     public MessageDispatcher(Socket socket) {
         this.socket = socket;
@@ -106,6 +113,13 @@ public class MessageDispatcher implements Executable {
                 if (!socket.isClosed()) {
                     socket.close();
                 }
+
+                // TODO 수정사항 (재민)
+                // 비정상 종료(창 닫기 등) -> 소켓 닫힐 때 세션메니지먼트에서도 무조건 제거하도록
+                if(Objects.nonNull(currentSessionId)) {
+                    SocketManagement.removeSocket(currentSessionId);
+                    log.debug("[세션 정리] 클라이언트 종료로 인한 소켓 제거 - sessionId: {}", currentSessionId);
+                }
             } catch (IOException e) {
                 log.error("소켓 종료 실패: {}", e.getMessage());
             }
@@ -120,11 +134,15 @@ public class MessageDispatcher implements Executable {
             // 2. Header 영역에서 필요한 정보 추출
             HeaderDto.RequestHeader requestHeader = dispatchMapper.requestHeaderParser(rootNode);
 
+            // TODO 수정사항 (재민)
+            // 요청 헤더에서 세션아이디 추출해서 currentSessionId에 저장해둠
+            this.currentSessionId = requestHeader.sessionId();
+
             RequestDataDto requestData = dispatchMapper.requestDataParser(requestHeader.type(), rootNode);
 
             RequestDto request = dispatchMapper.requestParser(requestHeader, requestData);
 
-             filterChain.doFilter(request);
+            filterChain.doFilter(request);
 
             // 3. Data 영역만 따로 떼어냅니다.
 
@@ -137,6 +155,17 @@ public class MessageDispatcher implements Executable {
 
             // 5. 핸들러에게 'header' 와 'data 노드'를 넘겨서 처리 요청
             Object result = handler.execute(requestHeader, requestData);
+
+            // TODO 수정사항 (재민)
+            // 결과가 있을 때만 진행하도록 수정
+            if (Objects.nonNull(result)) {
+                // TODO 동건이형이 추가함
+                if (requestHeader.type().equals(TypeManagement.Auth.LOGIN)) {
+                    SocketManagement.checkSocket(requestHeader.type(), result, socket);
+                } else if (requestHeader.type().equals(TypeManagement.Auth.LOGOUT)) {
+                    SocketManagement.checkSocket(requestHeader.type(), requestHeader, socket);
+                }
+            }
 
             // 6. 결과 반환 (성공 응답 생성)
             return dispatchMapper.toResult(result);
