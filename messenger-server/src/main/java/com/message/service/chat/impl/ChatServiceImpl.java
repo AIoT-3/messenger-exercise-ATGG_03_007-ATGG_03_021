@@ -15,6 +15,8 @@ import com.message.service.chat.ChatService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 @Slf4j
@@ -42,7 +44,7 @@ public class ChatServiceImpl implements ChatService {
         room.getChatList().add(roomChatEntity);
 
         // 브로드캐스트
-        broadcast(room, roomChatEntity, messageId);
+//        broadcast(room, roomChatEntity, messageId);
 
         return new ChatDto.MessageResponse(room.getRoomId(), messageId);
     }
@@ -61,7 +63,7 @@ public class ChatServiceImpl implements ChatService {
         );
 
         // String 변환 없이 객체 통째로 전달 -> SocketManagement에서 알아서 할거임
-        for (String targetSessionId : room.getParticipantSessionIds()) {
+        for (String targetSessionId : room.getParticipantUserIds()) {
             SocketManagement.sendMessage(targetSessionId, pushPacket);
         }
     }
@@ -86,7 +88,7 @@ public class ChatServiceImpl implements ChatService {
         // 매퍼 써서 디티오 생성
         ChatDto.ChatMessage privateData = chatMapper.toChatMessage(new RoomChatEntity(request.message(), senderId, messageId), messageId);
 
-        sendToClient(receiverSessionId, TypeManagement.Chat.PRIVATE_MESSAGE_RECEIVE, privateData, messageId);
+//        sendToClient(receiverSessionId, TypeManagement.Chat.PRIVATE_MESSAGE_RECEIVE, privateData, messageId);
 
         return chatMapper.toPrivateResponse(senderId, request.receiverId(), messageId);
     }
@@ -104,6 +106,19 @@ public class ChatServiceImpl implements ChatService {
 
         // 매퍼로 엔티티 리스트를 히스토리 응답 객체로 변환
         return chatMapper.toHistoryResponse(room.getRoomId(), room.getChatList());
+    }
+
+    @Override
+    public ChatDto.HistoryResponse getHistoryAllByRoomId(long roomId){
+        RoomEntity room = RoomManagement.getRoom(roomId);
+
+        return chatMapper.toHistoryResponse(room.getRoomId(), room.getChatList());
+    }
+
+    @Override
+    public List<String> getRoomInUserIds(long roomId) {
+        RoomEntity room = RoomManagement.getRoom(roomId);
+        return new ArrayList<> (room.getParticipantUserIds());
     }
 
     // 중복 부분 줄이려고 만든 공통 메서드

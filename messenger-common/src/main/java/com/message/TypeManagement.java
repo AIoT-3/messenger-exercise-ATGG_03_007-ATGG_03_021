@@ -69,6 +69,8 @@ public class TypeManagement {
     public static class Sync {
         public static final String USER = "SYNC-USER";
         public static final String ROOM = "SYNC-ROOM";
+        public static final String ROOM_CHAT = "SYNC-ROOM-CHAT";
+        public static final String PRIVATE_CHAT = "SYNC-PRIVATE-CHAT";
     }
 
     public static final Map<String, Class<? extends RequestDataDto>> requestDataDtoClassMap = new HashMap<>();

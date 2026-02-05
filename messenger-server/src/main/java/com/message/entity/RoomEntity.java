@@ -1,6 +1,5 @@
 package com.message.entity;
 
-import com.message.domain.AtomicLongIdManagement;
 import com.message.entity.chat.Chat;
 import com.message.entity.chat.WhisperChatEntity;
 import lombok.Getter;
@@ -25,18 +24,18 @@ public class RoomEntity {
     }
 
     // 중복 방지 위해 Set 사용
-    private final Set<String> participantSessionIds = ConcurrentHashMap.newKeySet();
+    private final Set<String> participantUserIds = ConcurrentHashMap.newKeySet();
 
-    public void addParticipant(String sessionId) {
-        participantSessionIds.add(sessionId);
+    public void addParticipant(String userId) {
+        participantUserIds.add(userId);
     }
 
-    public void removeParticipant(String sessionId) {
-        participantSessionIds.remove(sessionId);
+    public void removeParticipant(String userId) {
+        participantUserIds.remove(userId);
     }
 
     public int getUserCount() {
-        return participantSessionIds.size();
+        return participantUserIds.size();
     }
 
     public synchronized void increaseUserCount() {

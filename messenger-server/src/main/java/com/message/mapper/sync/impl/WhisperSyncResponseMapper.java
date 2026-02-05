@@ -5,24 +5,30 @@ import com.message.TypeManagement;
 import com.message.domain.AtomicLongIdManagement;
 import com.message.dto.HeaderDto;
 import com.message.dto.ResponseDto;
-import com.message.dto.data.impl.RoomDto;
+import com.message.dto.data.impl.ChatDto;
 import com.message.dto.data.impl.SynchronizedDto;
 import com.message.mapper.sync.AbstractSyncResponseMapper;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 
-public class RoomSyncResponseMapper extends AbstractSyncResponseMapper<RoomDto.RoomSummary> {
+public class WhisperSyncResponseMapper extends AbstractSyncResponseMapper<ChatDto.PrivateResponse> {
+
     @Override
-    public String toSyncResponse(List<RoomDto.RoomSummary> list) {
+    public String toSyncResponse(List<ChatDto.PrivateResponse> list) {
+        if(list.size() != 1){
+            throw new IllegalArgumentException();
+        }
+
         HeaderDto.ResponseHeader responseHeader = new HeaderDto.ResponseHeader(
-                TypeManagement.Sync.ROOM,
+                TypeManagement.Sync.PRIVATE_CHAT,
                 true,
                 OffsetDateTime.now(),
                 AtomicLongIdManagement.getResponseMessageIdSequenceIncreateAndGet()
         );
-        SynchronizedDto.RoomListSync roomListSync = new SynchronizedDto.RoomListSync(list);
-        ResponseDto responseDto = new ResponseDto(responseHeader, roomListSync);
+        SynchronizedDto.PrivateSyncResponse privateSyncResponse = mapper.convertValue(list.getFirst(), SynchronizedDto.PrivateSyncResponse.class);
+        ResponseDto responseDto = new ResponseDto(responseHeader, privateSyncResponse);
+
         try {
             return mapper.writeValueAsString(responseDto);
         } catch (JsonProcessingException e) {
