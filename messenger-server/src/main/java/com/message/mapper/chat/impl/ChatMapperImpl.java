@@ -1,5 +1,8 @@
 package com.message.mapper.chat.impl;
 
+import com.message.dto.HeaderDto;
+import com.message.dto.ResponseDto;
+import com.message.dto.data.ResponseDataDto;
 import com.message.dto.data.impl.ChatDto;
 import com.message.entity.chat.Chat;
 import com.message.entity.chat.RoomChatEntity;
@@ -7,8 +10,6 @@ import com.message.mapper.chat.ChatMapper;
 
 import java.time.OffsetDateTime;
 import java.util.List;
-
-// TODO 수정사항 (재민)
 
 public class ChatMapperImpl implements ChatMapper {
 
@@ -48,6 +49,14 @@ public class ChatMapperImpl implements ChatMapper {
                 receiverId,
                 "귓속말이 전송되었습니다.",
                 messageId
+        );
+    }
+
+    @Override
+    public ResponseDto toResponseDto(String type, long messageId, ResponseDataDto data){
+        return new ResponseDto(
+                new HeaderDto.ResponseHeader(type, true, OffsetDateTime.now(), messageId),
+                data
         );
     }
 }

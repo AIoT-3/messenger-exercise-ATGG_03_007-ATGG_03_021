@@ -2,8 +2,6 @@ package com.message.entity.chat;
 
 import lombok.Getter;
 
-// TODO 구현사항 (재민)
-
 @Getter
 public class RoomChatEntity extends Chat {
     private String userId;

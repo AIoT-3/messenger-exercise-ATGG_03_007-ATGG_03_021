@@ -1,6 +1,5 @@
 package com.message.service.auth.impl;
 
-import com.message.domain.SessionManagement;
 import com.message.domain.UserManagement;
 import com.message.dto.data.impl.AuthDto;
 import com.message.entity.UserEntity;
@@ -35,8 +34,4 @@ public class AuthServiceImpl implements AuthService {
         return user;
     }
 
-    @Override
-    public void logout(String sessionId) {
-        SessionManagement.deleteSession(sessionId);
-    }
 }

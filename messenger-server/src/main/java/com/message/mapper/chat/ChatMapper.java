@@ -1,7 +1,7 @@
 package com.message.mapper.chat;
 
-// TODO 구현사항 (재민)
-
+import com.message.dto.ResponseDto;
+import com.message.dto.data.ResponseDataDto;
 import com.message.dto.data.impl.ChatDto;
 import com.message.entity.chat.Chat;
 import com.message.entity.chat.RoomChatEntity;
@@ -17,4 +17,6 @@ public interface ChatMapper {
 
     // 귓속말 전송 성공 응답 생성
     ChatDto.PrivateResponse toPrivateResponse(String senderId, String receiverId, long messageId);
+
+    ResponseDto toResponseDto(String type, long messageId, ResponseDataDto data);
 }

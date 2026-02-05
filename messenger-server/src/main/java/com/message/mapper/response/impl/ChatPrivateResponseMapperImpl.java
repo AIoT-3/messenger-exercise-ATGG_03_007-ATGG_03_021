@@ -5,8 +5,6 @@ import com.message.dto.ResponseDto;
 import com.message.dto.data.impl.ChatDto;
 import com.message.mapper.response.AbstractResponseMapper;
 
-// TODO 구현사항 (재민)
-
 public class ChatPrivateResponseMapperImpl extends AbstractResponseMapper {
     @Override
     public String getClassName() {

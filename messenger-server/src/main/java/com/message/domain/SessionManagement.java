@@ -33,7 +33,6 @@ public class SessionManagement {
         return sessions.get(uuid);
     }
 
-    // TODO 수정사항 (재민)
     // 귓속말 할 때 필요함
     public static String getSessionId(String userId) {
         if (Objects.isNull(userId) || userId.isBlank()) {
@@ -48,7 +47,6 @@ public class SessionManagement {
                 .orElse(null);
     }
 
-    // TODO 동건이형이 추가함 (예외 검증하자.........)
     public static List<String> getSessionIdList(List<String> userIdList) {
         if (Objects.isNull(userIdList) || userIdList.isEmpty()) {
             throw new BusinessException(ErrorManagement.User.INVALID_INPUT, "사용자 리스트가 비었습니다.", 400);

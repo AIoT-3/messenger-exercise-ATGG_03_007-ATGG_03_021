@@ -5,8 +5,6 @@ import com.message.dto.ResponseDto;
 import com.message.dto.data.impl.ChatDto;
 import com.message.mapper.response.AbstractResponseMapper;
 
-// TODO 구현사항 (재민)
-
 // 일반 채팅 성공 응답 처리 용도임
 public class ChatMessageResponseMapperImpl extends AbstractResponseMapper {
     @Override

@@ -114,7 +114,7 @@ public class DispatchMapperImpl implements DispatchMapper {
                 TypeManagement.ERROR,
                 false,
                 OffsetDateTime.now(),
-                AtomicLongIdManagement.getMessageIdSequenceIncreateAndGet()
+                AtomicLongIdManagement.getResponseMessageIdSequenceIncreateAndGet()
         );
         ResponseDto errorResponse = new ResponseDto(responseHeader, response);
         return mapper.writeValueAsString(errorResponse);

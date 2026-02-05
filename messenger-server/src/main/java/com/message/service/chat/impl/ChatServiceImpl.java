@@ -1,7 +1,5 @@
 package com.message.service.chat.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.message.TypeManagement;
 import com.message.domain.*;
 import com.message.dto.HeaderDto;
@@ -16,11 +14,8 @@ import com.message.mapper.chat.impl.ChatMapperImpl;
 import com.message.service.chat.ChatService;
 import lombok.extern.slf4j.Slf4j;
 
-import java.lang.reflect.Type;
 import java.time.OffsetDateTime;
 import java.util.Objects;
-
-// TODO 구현사항 (재민)
 
 @Slf4j
 public class ChatServiceImpl implements ChatService {
@@ -38,9 +33,7 @@ public class ChatServiceImpl implements ChatService {
         // 보낸 사람 확인 (유저아이디)
         String senderId = SessionManagement.getUserId(sessionId);
 
-        // TODO
-        // 고유 메시지 아이디 생성 (근데 이거 고민할 부분임. messageId 아토믹 이미 만들어놓긴 했는데 현재 구조는 모든 동작에 다 적용되는 구조임. 채팅 시에만 적용할지 고민)
-        long messageId = AtomicLongIdManagement.getMessageIdSequenceIncreateAndGet();
+        long messageId = AtomicLongIdManagement.getChatMessageIdSequenceIncreateAndGet();
 
         // 채팅 엔티티 생성
         RoomChatEntity roomChatEntity = new RoomChatEntity(request.message(), senderId, messageId);
@@ -88,7 +81,7 @@ public class ChatServiceImpl implements ChatService {
         }
 
         // 메시지 아이디 발급
-        long messageId = AtomicLongIdManagement.getMessageIdSequenceIncreateAndGet();
+        long messageId = AtomicLongIdManagement.getChatMessageIdSequenceIncreateAndGet();
 
         // 매퍼 써서 디티오 생성
         ChatDto.ChatMessage privateData = chatMapper.toChatMessage(new RoomChatEntity(request.message(), senderId, messageId), messageId);
@@ -114,12 +107,9 @@ public class ChatServiceImpl implements ChatService {
     }
 
     // 중복 부분 줄이려고 만든 공통 메서드
-    private void sendToClient(String targetSessionId, String type, Object data, long messageId) {
+    private void sendToClient(String targetSessionId, String type, ResponseDataDto data, long messageId) {
         // 패킷 포장 (헤더 생성)
-        ResponseDto pushPacket = new ResponseDto(
-                new HeaderDto.ResponseHeader(type, true, OffsetDateTime.now(), messageId),
-                (ResponseDataDto) data
-        );
+        ResponseDto pushPacket = chatMapper.toResponseDto(type, messageId, data);
 
         // SocketManagement가 내부적으로 제이슨 변환을 처리하므로 그냥 호출만 하면 됨
         SocketManagement.sendMessage(targetSessionId, pushPacket);

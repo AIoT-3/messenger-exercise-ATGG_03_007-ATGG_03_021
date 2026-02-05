@@ -42,7 +42,7 @@ public abstract class AbstractResponseMapper implements ResponseMapper {
                 type,
                 true,
                 OffsetDateTime.now(),
-                AtomicLongIdManagement.getMessageIdSequenceIncreateAndGet()
+                AtomicLongIdManagement.getResponseMessageIdSequenceIncreateAndGet()
         );
     }
 }

@@ -8,8 +8,6 @@ import com.message.handler.Handler;
 import com.message.service.chat.ChatService;
 import com.message.service.chat.impl.ChatServiceImpl;
 
-// TODO 구현사항 (재민)
-
 public class ChatHistoryHandler implements Handler {
     private final ChatService chatService = new ChatServiceImpl();
 

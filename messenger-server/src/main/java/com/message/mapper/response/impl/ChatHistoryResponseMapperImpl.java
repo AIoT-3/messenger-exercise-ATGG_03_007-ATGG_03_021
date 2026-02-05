@@ -1,7 +1,5 @@
 package com.message.mapper.response.impl;
 
-// TODO 구현사항 (재민)
-
 import com.message.TypeManagement;
 import com.message.dto.ResponseDto;
 import com.message.dto.data.impl.ChatDto;

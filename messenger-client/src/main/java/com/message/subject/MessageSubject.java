@@ -29,7 +29,7 @@ public class MessageSubject implements Subject {
         Command command = CommandFactory.getCommand(eventType, messageContent.getType());
         Object result = command.execute(messageContent);
         if(result instanceof String str && str.contains("redirect:")){
-            //TODO local 요청 ui처리 - 예: 로그인 창 띄우기
+            //TODO local 요청 ui처리 - 서버로 요청을 보내지 않고 ui 변경
         } else {
             observers.get(eventType).updateMessage(result);
         }

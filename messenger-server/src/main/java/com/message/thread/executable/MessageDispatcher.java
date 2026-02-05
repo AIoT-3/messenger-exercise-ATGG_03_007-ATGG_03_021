@@ -3,6 +3,7 @@ package com.message.thread.executable;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.message.TypeManagement;
+import com.message.domain.SessionManagement;
 import com.message.domain.SocketManagement;
 import com.message.dto.HeaderDto;
 import com.message.dto.RequestDto;
@@ -29,7 +30,6 @@ public class MessageDispatcher implements Executable {
     private final Socket socket;
     private final FilterChain filterChain = FilterChain.getFilterChain();
 
-    // TODO 수정사항 (재민)
     // 세션 아이디 보관할 변수 추가함. execute()의 finally에서 removeSocket 호출하기 위해
     private String currentSessionId;
 
@@ -113,12 +113,12 @@ public class MessageDispatcher implements Executable {
                 if (!socket.isClosed()) {
                     socket.close();
                 }
+                SocketManagement.removeSocket(socket);
+                log.debug("[소캣 정리] 클라이언트 종료로 인한 소켓 제거");
 
-                // TODO 수정사항 (재민)
-                // 비정상 종료(창 닫기 등) -> 소켓 닫힐 때 세션메니지먼트에서도 무조건 제거하도록
-                if(Objects.nonNull(currentSessionId)) {
-                    SocketManagement.removeSocket(currentSessionId);
-                    log.debug("[세션 정리] 클라이언트 종료로 인한 소켓 제거 - sessionId: {}", currentSessionId);
+                if (Objects.nonNull(currentSessionId)) {
+                    SessionManagement.deleteSession(currentSessionId);
+                    log.debug("[세션 정리] 클라이언트 종료로 인한 세션 제거 - sessionId: {}", currentSessionId);
                 }
             } catch (IOException e) {
                 log.error("소켓 종료 실패: {}", e.getMessage());
@@ -134,8 +134,6 @@ public class MessageDispatcher implements Executable {
             // 2. Header 영역에서 필요한 정보 추출
             HeaderDto.RequestHeader requestHeader = dispatchMapper.requestHeaderParser(rootNode);
 
-            // TODO 수정사항 (재민)
-            // 요청 헤더에서 세션아이디 추출해서 currentSessionId에 저장해둠
             this.currentSessionId = requestHeader.sessionId();
 
             RequestDataDto requestData = dispatchMapper.requestDataParser(requestHeader.type(), rootNode);
@@ -156,15 +154,12 @@ public class MessageDispatcher implements Executable {
             // 5. 핸들러에게 'header' 와 'data 노드'를 넘겨서 처리 요청
             Object result = handler.execute(requestHeader, requestData);
 
-            // TODO 수정사항 (재민)
             // 결과가 있을 때만 진행하도록 수정
-            if (Objects.nonNull(result)) {
-                // TODO 동건이형이 추가함
-                if (requestHeader.type().equals(TypeManagement.Auth.LOGIN)) {
-                    SocketManagement.checkSocket(requestHeader.type(), result, socket);
-                } else if (requestHeader.type().equals(TypeManagement.Auth.LOGOUT)) {
-                    SocketManagement.checkSocket(requestHeader.type(), requestHeader, socket);
-                }
+
+            if (requestHeader.type().equals(TypeManagement.Auth.LOGIN)) {
+                SocketManagement.checkSocket(requestHeader.type(), result, socket);
+            } else if (requestHeader.type().equals(TypeManagement.Auth.LOGOUT)) {
+                SocketManagement.checkSocket(requestHeader.type(), requestHeader, socket);
             }
 
             // 6. 결과 반환 (성공 응답 생성)
@@ -179,25 +174,6 @@ public class MessageDispatcher implements Executable {
                 log.error("[오류 메시지 디스패치] JSON 변환 중 치명적인 오류 발생");
                 return "[오류 메시지 디스패치] JSON 변환 중 치명적인 오류 발생";
             }
-
-            // TODO 수정사항 (재민)
-            // finally 블록에서 소켓 클로즈 먼저 해버려서, 그 뒤에 나오는 writer.println(result)는 이미 닫힌 문에다 프린트 하는 격이 됨
-            // 이미 execute() 메서드 시작 부분에 try-with-resources 구문 있으니, 이 블록 끝나면 알아서 writer 닫고 연결된 소켓도 닫아줌
-//        } finally {
-//            try {
-//                if (Objects.nonNull(socket)) {
-//                    socket.close();
-//                    log.debug("client 정상종료");
-//
-//                    //client제거
-//                    if (SessionManagement.isExisted("id")) {
-//                        SessionManagement.deleteSession("id");
-//                    }
-//                }
-//            } catch (IOException e) {
-//                log.error("error-client-close : {}", e.getMessage(), e);
-//            }
-//        }
         }
     }
 }

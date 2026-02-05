@@ -1,7 +1,5 @@
 package com.message.handler.impl;
 
-// TODO 구현사항 (재민)
-
 import com.message.TypeManagement;
 import com.message.dto.HeaderDto;
 import com.message.dto.data.RequestDataDto;
