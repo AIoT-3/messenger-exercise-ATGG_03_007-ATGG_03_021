@@ -1,6 +1,7 @@
 package com.message.dto.data.impl;
 
 import com.message.TypeManagement;
+import com.message.dto.ResponseDto;
 import com.message.dto.data.MessageDataType;
 import com.message.dto.data.RequestDataDto;
 import com.message.dto.data.ResponseDataDto;
@@ -86,5 +87,11 @@ public class ChatDto {
             String senderName,
             String timestamp,
             String content
-    ) {}
+    ) implements ResponseDataDto {
+        // TODO 수정사항 (재민)
+        @Override
+        public String getType() {
+            return TypeManagement.Chat.MESSAGE_RECEIVE;
+        }
+    }
 }

@@ -29,7 +29,7 @@ public class RoomServiceImpl implements RoomService {
         long roomId = AtomicLongIdManagement.getRoomIdSequenceIncreateAndGet();
 
         // 엔티티 생성
-        RoomEntity newRoom = new RoomEntity(request.roomName(), 0);
+        RoomEntity newRoom = new RoomEntity(roomId, request.roomName(), 0);
 
         // 엔티티 저장
         RoomManagement.addRoom(newRoom);

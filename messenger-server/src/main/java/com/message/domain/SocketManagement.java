@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.message.TypeManagement;
 import com.message.dto.HeaderDto;
-import com.message.dto.RequestDto;
 import com.message.dto.data.impl.AuthDto;
 import com.message.exception.custom.BusinessException;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +32,15 @@ public class SocketManagement {
         if (Objects.nonNull(sessionId)) {
             socketMap.remove(sessionId);
             log.debug("[SocketManagement] 소켓 제거: sessionId: {}", sessionId);
+        }
+    }
+
+    public static void removeSocket(Socket socket){
+        if(Objects.nonNull(socket) || socketMap.containsValue(socket)){
+            socketMap.entrySet().stream()
+                    .filter(entry -> entry.getValue().equals(socket))
+                    .findFirst()
+                    .ifPresent(entry -> removeSocket(entry.getKey()));
         }
     }
 
@@ -80,7 +88,7 @@ public class SocketManagement {
     }
 
     public static void sendMessage(String sessionId, Object data) {
-        Socket socket = socketMap.get(sessionId);
+        Socket socket = getSocket(sessionId);
 
         if (Objects.isNull(socket) || socket.isClosed()) {
             log.warn("[SocketManagement] 전송 실패 - 소켓이 없거나 닫힘: {}", sessionId);

@@ -3,11 +3,9 @@ package com.message.domain;
 import com.message.exception.custom.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class SessionManagement {
@@ -35,6 +33,32 @@ public class SessionManagement {
         return sessions.get(uuid);
     }
 
+    // 귓속말 할 때 필요함
+    public static String getSessionId(String userId) {
+        if (Objects.isNull(userId) || userId.isBlank()) {
+            throw new BusinessException(ErrorManagement.User.INVALID_INPUT, "유효하지 않은 유저 아이디입니다.", 400);
+        }
+
+        // 맵 돌면서 파라미터로 받은 유저아이디 가진 첫 번째 세션 아이디 찾기
+        return sessions.entrySet().stream()
+                .filter(entry -> entry.getValue().equals(userId))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
+    }
+
+    public static List<String> getSessionIdList(List<String> userIdList) {
+        if (Objects.isNull(userIdList) || userIdList.isEmpty()) {
+            throw new BusinessException(ErrorManagement.User.INVALID_INPUT, "사용자 리스트가 비었습니다.", 400);
+        }
+
+        Set<String> userIdSet = new HashSet<>(userIdList);
+        return sessions.entrySet().stream()
+                .filter(s -> userIdSet.contains(s.getValue()))
+                .map(Map.Entry::getKey)
+                .toList();
+    }
+
     public static void deleteSession(String uuid) {
         // 1. 일단 지워본다. 지워진 값이 있다면 그 값을 반환하고, 없으면 null을 반환한다.
         String removedUserId = sessions.remove(uuid);
@@ -42,7 +66,7 @@ public class SessionManagement {
         // 2. null이라면 존재하지 않았다는 뜻이므로 예외 처리
         if (removedUserId == null) {
             log.warn("[세션 삭제 실패] 존재하지 않는 UUID: {}", uuid);
-            throw new IllegalArgumentException("존재하지 않는 uuid입니다.");
+            throw new BusinessException(ErrorManagement.Session.NOT_FOUND, "존재하지 않는 세션입니다.", 404);
         }
 
         log.debug("[세션 삭제 성공] UserID: {}, UUID: {}", removedUserId, uuid);

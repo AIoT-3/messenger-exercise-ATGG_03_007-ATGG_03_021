@@ -1,13 +1,11 @@
 package com.message.handler.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.message.TypeManagement;
 import com.message.domain.SessionManagement;
 import com.message.dto.HeaderDto;
 import com.message.dto.data.RequestDataDto;
 import com.message.dto.data.impl.AuthDto;
 import com.message.entity.UserEntity;
-import com.message.exception.custom.mapper.ObjectMappingFailException;
 import com.message.handler.Handler;
 import com.message.mapper.auth.AuthMapper;
 import com.message.mapper.auth.impl.AuthMapperImpl;
