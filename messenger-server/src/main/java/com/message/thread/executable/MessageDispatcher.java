@@ -2,6 +2,7 @@ package com.message.thread.executable;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.message.cofig.AppConfig;
 import com.message.dto.HeaderDto;
 import com.message.dto.RequestDto;
 import com.message.dto.data.RequestDataDto;
@@ -15,7 +16,10 @@ import com.message.mapper.dispatch.DispatchMapper;
 import com.message.mapper.dispatch.impl.DispatchMapperImpl;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
@@ -56,19 +60,19 @@ public class MessageDispatcher implements Executable {
                 }
 
                 String lengthLine = headerBuffer.toString(StandardCharsets.UTF_8).trim();
-                log.debug("lengthLine: {}", lengthLine);
+                log.debug("{} {}", AppConfig.MESSAGE_LENGTH, lengthLine);
 
                 // 빈 헤더는 무시하고 다음 메시지 대기
                 if (lengthLine.isEmpty()) {
                     continue;
                 }
 
-                if (!lengthLine.startsWith("message-length:")) {
+                if (!lengthLine.startsWith(AppConfig.MESSAGE_LENGTH)) {
                     log.warn("Invalid message format: {}", lengthLine);
                     continue;
                 }
 
-                int length = Integer.parseInt(lengthLine.substring("message-length:".length()).trim());
+                int length = Integer.parseInt(lengthLine.substring(AppConfig.MESSAGE_LENGTH.length()).trim());
                 log.debug("읽어야 할 본문 길이 (Bytes): {}", length);
 
                 // 2. 바이트 단위로 정확히 읽기
@@ -94,7 +98,7 @@ public class MessageDispatcher implements Executable {
                 byte[] responseBytes = result.getBytes(StandardCharsets.UTF_8);
 
                 // 헤더: message-length:길이\n 형식으로 전송 (클라이언트와 프로토콜 일치)
-                String header = "message-length:" + responseBytes.length + "\n";
+                String header = AppConfig.MESSAGE_LENGTH + responseBytes.length + "\n";
                 os.write(header.getBytes(StandardCharsets.UTF_8)); // 헤더 전송
                 os.write(responseBytes); // 페이로드(제이슨 데이터) 전송
                 os.flush();
@@ -150,25 +154,6 @@ public class MessageDispatcher implements Executable {
                 log.error("[오류 메시지 디스패치] JSON 변환 중 치명적인 오류 발생");
                 return "[오류 메시지 디스패치] JSON 변환 중 치명적인 오류 발생";
             }
-
-            // TODO 수정사항 (재민)
-            // finally 블록에서 소켓 클로즈 먼저 해버려서, 그 뒤에 나오는 writer.println(result)는 이미 닫힌 문에다 프린트 하는 격이 됨
-            // 이미 execute() 메서드 시작 부분에 try-with-resources 구문 있으니, 이 블록 끝나면 알아서 writer 닫고 연결된 소켓도 닫아줌
-//        } finally {
-//            try {
-//                if (Objects.nonNull(socket)) {
-//                    socket.close();
-//                    log.debug("client 정상종료");
-//
-//                    //client제거
-//                    if (SessionManagement.isExisted("id")) {
-//                        SessionManagement.deleteSession("id");
-//                    }
-//                }
-//            } catch (IOException e) {
-//                log.error("error-client-close : {}", e.getMessage(), e);
-//            }
-//        }
         }
     }
 }

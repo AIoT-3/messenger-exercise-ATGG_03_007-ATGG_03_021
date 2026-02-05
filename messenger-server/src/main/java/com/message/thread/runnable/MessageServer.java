@@ -70,18 +70,4 @@ public class MessageServer implements Runnable {
         clientMap.put(id, socket);
         return true;
     }
-
-    public static List<String> getClientIds() {
-        return clientMap.keySet().stream().collect(Collectors.toList());
-    }
-
-    public static Socket getClientSocket(String id) {
-        return clientMap.get(id);
-    }
-
-    public static void removeClient(String id) {
-        if (!StringUtils.isEmpty(id)) {
-            clientMap.remove(id);
-        }
-    }
 }
