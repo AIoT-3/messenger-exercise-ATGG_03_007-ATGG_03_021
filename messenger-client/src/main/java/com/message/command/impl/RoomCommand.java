@@ -158,4 +158,158 @@ public class RoomCommand {
             }
         }
     }
+
+    /**
+     * 채팅방 입장 요청 Command
+     */
+    public static class RoomEnterSendCommand extends SendCommand {
+        private static final Logger log = LoggerFactory.getLogger(RoomEnterSendCommand.class);
+
+        @Override
+        public String getType() {
+            return TypeManagement.Room.ENTER;
+        }
+
+        @Override
+        public Object execute(MessageContent.Message message) {
+            MessageContent.RequestMessage requestMessage = (MessageContent.RequestMessage) message;
+            String content = requestMessage.content();
+
+            if (content == null || content.trim().isEmpty()) {
+                throw new IllegalArgumentException("채팅방 ID가 비어있습니다.");
+            }
+
+            long roomId;
+            try {
+                roomId = Long.parseLong(content.trim());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("올바른 채팅방 ID가 아닙니다: " + content);
+            }
+
+            HeaderDto.RequestHeader header = createRequestHeader(TypeManagement.Room.ENTER);
+            RoomDto.EnterRequest data = new RoomDto.EnterRequest(roomId);
+
+            try {
+                String json = mapper.writeValueAsString(new RequestDto(header, data));
+                log.debug("채팅방 입장 요청 JSON 생성: {}", json);
+                return json;
+            } catch (JsonProcessingException e) {
+                log.error("채팅방 입장 요청 JSON 변환 실패", e);
+                throw new RuntimeException("채팅방 입장 요청 생성 실패", e);
+            }
+        }
+    }
+
+    /**
+     * 채팅방 입장 응답 Command
+     */
+    public static class RoomEnterReceiveCommand extends ReceiveCommand {
+        private static final Logger log = LoggerFactory.getLogger(RoomEnterReceiveCommand.class);
+
+        @Override
+        public String getType() {
+            return TypeManagement.Room.ENTER_SUCCESS;
+        }
+
+        @Override
+        public Object execute(MessageContent.Message message) {
+            MessageContent.ResponseMessage responseMessage = (MessageContent.ResponseMessage) message;
+
+            try {
+                HeaderDto.ResponseHeader header = mapper.treeToValue(
+                    responseMessage.header(),
+                    HeaderDto.ResponseHeader.class
+                );
+
+                RoomDto.EnterResponse data = mapper.treeToValue(
+                    responseMessage.data(),
+                    RoomDto.EnterResponse.class
+                );
+
+                log.debug("채팅방 입장 성공 - roomId: {}, users: {}", data.roomId(), data.users());
+
+                return new ResponseDto(header, data);
+            } catch (JsonProcessingException e) {
+                log.error("채팅방 입장 응답 파싱 실패", e);
+                throw new RuntimeException("채팅방 입장 응답 처리 실패", e);
+            }
+        }
+    }
+
+    /**
+     * 채팅방 퇴장 요청 Command
+     */
+    public static class RoomExitSendCommand extends SendCommand {
+        private static final Logger log = LoggerFactory.getLogger(RoomExitSendCommand.class);
+
+        @Override
+        public String getType() {
+            return TypeManagement.Room.EXIT;
+        }
+
+        @Override
+        public Object execute(MessageContent.Message message) {
+            MessageContent.RequestMessage requestMessage = (MessageContent.RequestMessage) message;
+            String content = requestMessage.content();
+
+            if (content == null || content.trim().isEmpty()) {
+                throw new IllegalArgumentException("채팅방 ID가 비어있습니다.");
+            }
+
+            long roomId;
+            try {
+                roomId = Long.parseLong(content.trim());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("올바른 채팅방 ID가 아닙니다: " + content);
+            }
+
+            HeaderDto.RequestHeader header = createRequestHeader(TypeManagement.Room.EXIT);
+            RoomDto.ExitRequest data = new RoomDto.ExitRequest(roomId);
+
+            try {
+                String json = mapper.writeValueAsString(new RequestDto(header, data));
+                log.debug("채팅방 퇴장 요청 JSON 생성: {}", json);
+                return json;
+            } catch (JsonProcessingException e) {
+                log.error("채팅방 퇴장 요청 JSON 변환 실패", e);
+                throw new RuntimeException("채팅방 퇴장 요청 생성 실패", e);
+            }
+        }
+    }
+
+    /**
+     * 채팅방 퇴장 응답 Command
+     */
+    public static class RoomExitReceiveCommand extends ReceiveCommand {
+        private static final Logger log = LoggerFactory.getLogger(RoomExitReceiveCommand.class);
+
+        @Override
+        public String getType() {
+            return TypeManagement.Room.EXIT_SUCCESS;
+        }
+
+        @Override
+        public Object execute(MessageContent.Message message) {
+            MessageContent.ResponseMessage responseMessage = (MessageContent.ResponseMessage) message;
+
+            try {
+                HeaderDto.ResponseHeader header = mapper.treeToValue(
+                    responseMessage.header(),
+                    HeaderDto.ResponseHeader.class
+                );
+
+                RoomDto.ExitResponse data = mapper.treeToValue(
+                    responseMessage.data(),
+                    RoomDto.ExitResponse.class
+                );
+
+                log.debug("채팅방 퇴장 성공 - roomId: {}, message: {}", data.roomId(), data.message());
+
+                return new ResponseDto(header, data);
+            } catch (JsonProcessingException e) {
+                log.error("채팅방 퇴장 응답 파싱 실패", e);
+                throw new RuntimeException("채팅방 퇴장 응답 처리 실패", e);
+            }
+        }
+    }
 }

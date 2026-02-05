@@ -66,6 +66,11 @@ public class TypeManagement {
         public static final String EXIT_SUCCESS = "CHAT-ROOM-EXIT-SUCCESS";
     }
 
+    public static class Sync {
+        public static final String USER = "SYNC-USER";
+        public static final String ROOM = "SYNC-ROOM";
+    }
+
     public static final Map<String, Class<? extends RequestDataDto>> requestDataDtoClassMap = new HashMap<>();
     public static final Map<String, Class<? extends ResponseDataDto>> responseDataDataDtoClassMap = new HashMap<>();
 

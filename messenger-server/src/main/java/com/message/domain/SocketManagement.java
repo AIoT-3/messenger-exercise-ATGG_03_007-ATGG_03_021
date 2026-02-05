@@ -3,13 +3,17 @@ package com.message.domain;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.message.TypeManagement;
+import com.message.cofig.AppConfig;
 import com.message.dto.HeaderDto;
 import com.message.dto.data.impl.AuthDto;
 import com.message.exception.custom.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -100,12 +104,28 @@ public class SocketManagement {
             // data가 이미 String이면 그대로 쓰고, 객체면 제이슨으로 변환
             String json = (data instanceof String) ? (String) data : objectMapper.writeValueAsString(data);
 
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            PrintWriter out = new PrintWriter(socket.getOutputStream());
+            out.println("%s%s%n".formatted(AppConfig.MESSAGE_LENGTH, json.getBytes(StandardCharsets.UTF_8).length));
             out.println(json);
+            out.flush();
 
             log.debug("[SocketManagement] 메시지 전송 완료 - To: {}", sessionId);
         } catch (Exception e) {
             log.error("[SocketManagement] 전송 중 오류 - sessionId: {}", sessionId, e);
         }
+    }
+
+    public static void sendSynchronizedMessage(List<String> sessionIds, String message){
+        List<Socket> socketList = getSocketList(sessionIds);
+        socketList.forEach(s -> {
+            try {
+                OutputStream out = s.getOutputStream();
+                out.write("%s%s%n".formatted(AppConfig.MESSAGE_LENGTH, message.getBytes(StandardCharsets.UTF_8).length).getBytes(StandardCharsets.UTF_8));
+                out.write(message.getBytes(StandardCharsets.UTF_8));
+                out.flush();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 }

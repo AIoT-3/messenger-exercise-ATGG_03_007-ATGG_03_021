@@ -2,18 +2,27 @@ package com.message.handler.impl;
 
 import com.message.TypeManagement;
 import com.message.domain.SessionManagement;
+import com.message.domain.SocketManagement;
 import com.message.dto.HeaderDto;
 import com.message.dto.data.RequestDataDto;
 import com.message.dto.data.impl.AuthDto;
 import com.message.handler.Handler;
 import com.message.mapper.auth.AuthMapper;
 import com.message.mapper.auth.impl.AuthMapperImpl;
+import com.message.mapper.sync.impl.UserSyncResponseMapper;
+import com.message.service.user.UserService;
+import com.message.service.user.impl.UserServiceImpl;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
 
 @Slf4j
 public class LogoutHandler implements Handler {
 
     private final AuthMapper authMapper = new AuthMapperImpl();
+
+    private final UserService userService = new UserServiceImpl();
+    private final UserSyncResponseMapper userSyncResponseMapper = new UserSyncResponseMapper();
 
     @Override
     public String getMethod() {
@@ -33,6 +42,13 @@ public class LogoutHandler implements Handler {
         AuthDto.LogoutResponse response = authMapper.toLogoutResponse();
         log.debug("[로그아웃 시도] 성공 - sessionId: {}", sessionId);
 
+        sendSynchronizedUsers(SessionManagement.getAllSessionIds());
+
         return response;
+    }
+
+    private void sendSynchronizedUsers(List<String> sessionIds) {
+        String loginSuccessMessage = userSyncResponseMapper.toSyncResponse(userService.getUserList());
+        SocketManagement.sendSynchronizedMessage(sessionIds, loginSuccessMessage);
     }
 }

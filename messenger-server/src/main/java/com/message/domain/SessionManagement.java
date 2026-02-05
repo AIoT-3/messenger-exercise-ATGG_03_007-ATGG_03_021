@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SessionManagement {
     private static final Map<String, String> sessions = new ConcurrentHashMap<>();
-
     public static void addSessions(String uuid, String userId) {
         if (Objects.isNull(userId) || Objects.isNull(uuid) || userId.isBlank() || uuid.isBlank()) {
             log.error("[세션 등록] 값이 존재하지 않습니다");
@@ -76,4 +75,7 @@ public class SessionManagement {
         return new ArrayList<>(sessions.values());
     }
 
+    public static List<String> getAllSessionIds() {
+        return new ArrayList<>(sessions.keySet());
+    }
 }

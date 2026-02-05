@@ -1,5 +1,6 @@
 package com.message.ui.form;
 
+import com.message.dto.data.impl.ChatDto;
 import com.message.dto.data.impl.RoomDto;
 import com.message.dto.data.impl.UserDto;
 import com.message.session.ClientSession;
@@ -167,6 +168,33 @@ public class MessageClientForm extends JFrame {
     public void onRoomCreated(long roomId, String roomName) {
         SwingUtilities.invokeLater(() -> {
             chatPanel.onRoomCreated(roomId, roomName);
+        });
+    }
+
+    /**
+     * 채팅방 입장 성공 처리
+     */
+    public void onRoomEntered(long roomId, List<String> users) {
+        SwingUtilities.invokeLater(() -> {
+            chatPanel.onRoomEntered(roomId, users);
+        });
+    }
+
+    /**
+     * 채팅방 퇴장 성공 처리
+     */
+    public void onRoomExited(long roomId, String message) {
+        SwingUtilities.invokeLater(() -> {
+            chatPanel.onRoomExited(roomId, message);
+        });
+    }
+
+    /**
+     * 채팅 기록 수신 처리
+     */
+    public void onChatHistoryReceived(long roomId, List<ChatDto.ChatMessage> messages, boolean hasMore) {
+        SwingUtilities.invokeLater(() -> {
+            chatPanel.onChatHistoryReceived(roomId, messages, hasMore);
         });
     }
 

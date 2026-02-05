@@ -39,7 +39,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public RoomDto.ListResponse getRoomList(String sessionId) {
+    public RoomDto.ListResponse getRoomList() {
         // 모든 방 가져오기, 변환
         List<RoomDto.RoomSummary> summaries = RoomManagement.getAllRooms().stream()
                 .map(room -> new RoomDto.RoomSummary(
