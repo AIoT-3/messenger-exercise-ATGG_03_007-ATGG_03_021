@@ -587,6 +587,10 @@ public class ChatPanel extends JPanel {
             String currentUser = ClientSession.getUserId();
             boolean isMyMessage = sender != null && sender.equals(currentUser);
 
+            // TODO 수정사항 - 밑에 시간 더럽게 나오는 거 해결한 거 호출
+            // 가공된 시간 저장
+            String cleanTime = formatTimestamp(timestamp);
+
             // 발신자
             chatDocument.insertString(chatDocument.getLength(), sender + ": ", senderStyle);
 
@@ -595,7 +599,7 @@ public class ChatPanel extends JPanel {
             chatDocument.insertString(chatDocument.getLength(), content, messageStyle);
 
             // 타임스탬프
-            chatDocument.insertString(chatDocument.getLength(), " [" + timestamp + "]", timestampStyle);
+            chatDocument.insertString(chatDocument.getLength(), " [" + cleanTime + "]", timestampStyle); // 기존 timestamp -> cleanTime으로
 
             // 줄바꿈
             chatDocument.insertString(chatDocument.getLength(), "\n", null);
@@ -606,6 +610,34 @@ public class ChatPanel extends JPanel {
             log.error("메시지 표시 실패", e);
         }
     }
+
+    // TODO 수정사항 - 시간 너무 길게 나오는 거 해결
+    private String formatTimestamp(String rawTimestamp) {
+        if (rawTimestamp == null || rawTimestamp.isEmpty()) {
+            return LocalDateTime.now().format(DateTimeFormatter.ofPattern("M월 d일 HH:mm"));
+        }
+        try {
+            // ISO 포맷(2026-02-06T12:52:14...) 파싱
+            if (rawTimestamp.contains("T")) {
+                String[] parts = rawTimestamp.split("T");
+                String datePart = parts[0]; // "2026-02-06"
+                String timePart = parts[1]; // "12:52:14..."
+
+                // 날짜 파싱 (2026-02-06)
+                String[] dateSplit = datePart.split("-");
+                int month = Integer.parseInt(dateSplit[1]);
+                int day = Integer.parseInt(dateSplit[2]);
+
+                // 시간 추출 (12:52)
+                String hhMm = timePart.substring(0, 5);
+
+                return month + "월 " + day + "일 " + hhMm; // 결과: "2월 6일 12:52"
+            }
+        } catch (Exception e) {
+            log.warn("타임스탬프 변환 실패: {}", rawTimestamp);
+        }
+        return rawTimestamp;
+    } 
 
     /**
      * 시스템 메시지 추가

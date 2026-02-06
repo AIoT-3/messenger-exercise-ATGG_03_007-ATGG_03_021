@@ -141,7 +141,7 @@ public class PrivateMessageDialog extends JDialog {
         sendButton.setBorderPainted(false);
         sendButton.setOpaque(true);
         sendButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        sendButton.setPreferredSize(new Dimension(60, 35));
+        sendButton.setPreferredSize(new Dimension(80, 35)); // TODO 수정사항 - 기존 (60, 35)
         sendButton.addActionListener(e -> sendMessage());
 
         panel.add(messageField, BorderLayout.CENTER);
