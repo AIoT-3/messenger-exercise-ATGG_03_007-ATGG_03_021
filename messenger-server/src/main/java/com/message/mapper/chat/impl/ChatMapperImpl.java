@@ -6,6 +6,7 @@ import com.message.dto.data.ResponseDataDto;
 import com.message.dto.data.impl.ChatDto;
 import com.message.entity.chat.Chat;
 import com.message.entity.chat.RoomChatEntity;
+import com.message.entity.chat.WhisperChatEntity;
 import com.message.mapper.chat.ChatMapper;
 
 import java.time.OffsetDateTime;
@@ -26,6 +27,11 @@ public class ChatMapperImpl implements ChatMapper {
     }
 
     @Override
+    public ChatDto.ChatMessage toChatMessage(WhisperChatEntity entity, long messageId) {
+        return null;
+    }
+
+    @Override
     public ChatDto.HistoryResponse toHistoryResponse(long roomId, List<Chat> chatEntityList) {
         // 엔티티 리스트를 ChatMessage(디티오) 리스트로 변환
         List<ChatDto.ChatMessage> messages = chatEntityList.stream()
@@ -40,6 +46,11 @@ public class ChatMapperImpl implements ChatMapper {
         // 페이징 처리 위해 데이터 더 있는지 알려주는 필드 false -> 지금은 페이징 로직 없이 방에 있는 모든 채팅 리스트 한 번에 다 가져오고 있으니까
         // 지금은 일단 false 유지하되, 차후 로직 분리
         return new ChatDto.HistoryResponse(roomId, messages, false);
+    }
+
+    @Override
+    public ChatDto.PrivateHistoryResponse toPrivateHistoryResponse(String targetId, List<ChatDto.PrivateRequest> privateResponseList) {
+        return new ChatDto.PrivateHistoryResponse(targetId, privateResponseList, false);
     }
 
     @Override

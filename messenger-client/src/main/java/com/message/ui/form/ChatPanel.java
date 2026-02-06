@@ -1,6 +1,7 @@
 package com.message.ui.form;
 
 import com.message.TypeManagement;
+import com.message.dto.data.impl.ChatDto;
 import com.message.dto.data.impl.RoomDto;
 import com.message.dto.data.impl.UserDto;
 import com.message.session.ClientSession;
@@ -9,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
+import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.text.*;
@@ -16,9 +18,13 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 채팅 화면 패널
@@ -42,12 +48,23 @@ public class ChatPanel extends JPanel {
     private JList<UserDto.UserInfo> userList;
     private DefaultListModel<UserDto.UserInfo> userListModel;
 
+    // 현재 채팅방 정보
+    private JLabel currentRoomLabel;
+    private JButton exitRoomButton;
+    private JButton loadHistoryButton;
+    private String currentRoomName = "";
+    private boolean hasMoreHistory = false;
+    private long oldestMessageId = 0;
+
     // 스타일 정의
     private Style systemStyle;
     private Style myMessageStyle;
     private Style otherMessageStyle;
     private Style timestampStyle;
     private Style senderStyle;
+
+    // 읽지 않은 귓속말이 있는 유저 ID 목록
+    private final Set<String> unreadPrivateMessages = new HashSet<>();
 
     public ChatPanel(MessageClientForm parentForm, Subject subject) {
         this.parentForm = parentForm;
@@ -104,16 +121,71 @@ public class ChatPanel extends JPanel {
         // 왼쪽 사이드바
         JPanel sidebarPanel = createSidebarPanel();
 
+        // 오른쪽: 채팅방 헤더 + 채팅 영역
+        JPanel rightPanel = new JPanel(new BorderLayout());
+
+        // 채팅방 헤더 (현재 방 이름 + 퇴장 버튼)
+        JPanel roomHeaderPanel = createRoomHeaderPanel();
+        rightPanel.add(roomHeaderPanel, BorderLayout.NORTH);
+
         // 오른쪽 채팅 영역
         JScrollPane chatScrollPane = createChatArea();
+        rightPanel.add(chatScrollPane, BorderLayout.CENTER);
 
         // 분할 패널
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sidebarPanel, chatScrollPane);
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sidebarPanel, rightPanel);
         splitPane.setDividerLocation(180);
         splitPane.setDividerSize(3);
         splitPane.setContinuousLayout(true);
 
         return splitPane;
+    }
+
+    private JPanel createRoomHeaderPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(240, 240, 240));
+        panel.setBorder(new EmptyBorder(8, 10, 8, 10));
+
+        // 현재 채팅방 이름
+        currentRoomLabel = new JLabel("채팅방을 선택하세요");
+        currentRoomLabel.setFont(new Font("맑은 고딕", Font.BOLD, 13));
+        currentRoomLabel.setForeground(new Color(51, 51, 51));
+
+        // 버튼 패널
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+        buttonPanel.setOpaque(false);
+
+        // 이전 기록 불러오기 버튼
+        loadHistoryButton = new JButton("이전 기록");
+        loadHistoryButton.setFont(new Font("맑은 고딕", Font.PLAIN, 11));
+        loadHistoryButton.setBackground(new Color(108, 117, 125));
+        loadHistoryButton.setForeground(Color.WHITE);
+        loadHistoryButton.setFocusPainted(false);
+        loadHistoryButton.setBorderPainted(false);
+        loadHistoryButton.setOpaque(true);
+        loadHistoryButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        loadHistoryButton.setEnabled(false);
+        loadHistoryButton.addActionListener(e -> loadMoreHistory());
+
+        // 방 나가기 버튼
+        exitRoomButton = new JButton("방 나가기");
+        exitRoomButton.setFont(new Font("맑은 고딕", Font.PLAIN, 11));
+        exitRoomButton.setBackground(new Color(220, 53, 69));
+        exitRoomButton.setForeground(Color.WHITE);
+        exitRoomButton.setFocusPainted(false);
+        exitRoomButton.setBorderPainted(false);
+        exitRoomButton.setOpaque(true);
+        exitRoomButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        exitRoomButton.setEnabled(false);
+        exitRoomButton.addActionListener(e -> exitCurrentRoom());
+
+        buttonPanel.add(loadHistoryButton);
+        buttonPanel.add(exitRoomButton);
+
+        panel.add(currentRoomLabel, BorderLayout.WEST);
+        panel.add(buttonPanel, BorderLayout.EAST);
+
+        return panel;
     }
 
     private JPanel createSidebarPanel() {
@@ -151,6 +223,32 @@ public class ChatPanel extends JPanel {
         roomList.setCellRenderer(new RoomListCellRenderer());
         roomList.setFont(new Font("맑은 고딕", Font.PLAIN, 12));
 
+        // 더블클릭으로 방 입장
+        roomList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    RoomDto.RoomSummary selectedRoom = roomList.getSelectedValue();
+                    if (selectedRoom != null) {
+                        enterRoom(selectedRoom.roomId(), selectedRoom.roomName());
+                    }
+                }
+            }
+        });
+
+        // 엔터키로 방 입장
+        roomList.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    RoomDto.RoomSummary selectedRoom = roomList.getSelectedValue();
+                    if (selectedRoom != null) {
+                        enterRoom(selectedRoom.roomId(), selectedRoom.roomName());
+                    }
+                }
+            }
+        });
+
         JScrollPane scrollPane = new JScrollPane(roomList);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
 
@@ -185,6 +283,116 @@ public class ChatPanel extends JPanel {
         if (roomName != null && !roomName.trim().isEmpty()) {
             createRoom(roomName.trim());
         }
+    }
+
+    /**
+     * 귓속말 다이얼로그 표시
+     */
+    private void showPrivateMessageDialog(String userId, String userName) {
+        // 읽지 않은 귓속말 표시 제거
+        removeUnreadPrivateMessage(userId);
+        PrivateMessageDialog.openOrGet(parentForm, userId, userName, subject);
+    }
+
+    /**
+     * 귓속말 수신 처리 (알림 포함)
+     */
+    public void onPrivateMessageReceived(String senderId, String message, String timestamp) {
+        SwingUtilities.invokeLater(() -> {
+            // 열린 다이얼로그가 있으면 거기에 메시지 추가
+            PrivateMessageDialog dialog = PrivateMessageDialog.getOpenDialog(senderId);
+            if (dialog != null) {
+                dialog.onMessageReceived(senderId, message, timestamp);
+
+                // 다이얼로그가 열려있고 포커스되어 있으면 알림 안 띄움
+                if (dialog.isVisible() && dialog.isFocused()) {
+                    return;
+                }
+            }
+
+            // 유저 목록에 읽지 않은 귓속말 표시 추가
+            addUnreadPrivateMessage(senderId);
+
+            // 알림 표시 (논블로킹)
+            showPrivateMessageNotification(senderId, message);
+        });
+    }
+
+    /**
+     * 귓속말 알림 표시 (논블로킹 토스트 알림)
+     */
+    private void showPrivateMessageNotification(String senderId, String message) {
+        // 유저 이름 찾기
+        String senderName = senderId;
+        for (int i = 0; i < userListModel.size(); i++) {
+            UserDto.UserInfo user = userListModel.get(i);
+            if (user.id().equals(senderId)) {
+                senderName = user.name();
+                break;
+            }
+        }
+
+        final String finalSenderName = senderName;
+        final String finalSenderId = senderId;
+
+        // 논블로킹 알림 다이얼로그 생성
+        JDialog notificationDialog = new JDialog(parentForm, "새 귓속말", false);
+        notificationDialog.setLayout(new BorderLayout());
+        notificationDialog.setSize(300, 120);
+        notificationDialog.setLocationRelativeTo(parentForm);
+
+        // 메시지 패널
+        JPanel messagePanel = new JPanel(new BorderLayout());
+        messagePanel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+        messagePanel.setBackground(new Color(155, 89, 182));
+
+        String displayMessage = message.length() > 50 ? message.substring(0, 50) + "..." : message;
+        JLabel label = new JLabel("<html><b>" + finalSenderName + "님의 귓속말:</b><br>" + displayMessage + "</html>");
+        label.setForeground(Color.WHITE);
+        messagePanel.add(label, BorderLayout.CENTER);
+
+        // 버튼 패널
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton replyButton = new JButton("답장하기");
+        JButton closeButton = new JButton("닫기");
+
+        replyButton.addActionListener(e -> {
+            notificationDialog.dispose();
+            // 읽지 않은 귓속말 표시 제거
+            removeUnreadPrivateMessage(finalSenderId);
+            PrivateMessageDialog.openOrGet(parentForm, finalSenderId, finalSenderName, subject);
+        });
+
+        closeButton.addActionListener(e -> notificationDialog.dispose());
+
+        buttonPanel.add(replyButton);
+        buttonPanel.add(closeButton);
+
+        notificationDialog.add(messagePanel, BorderLayout.CENTER);
+        notificationDialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        // 5초 후 자동 닫기
+        Timer autoCloseTimer = new Timer(5000, e -> {
+            if (notificationDialog.isVisible()) {
+                notificationDialog.dispose();
+            }
+        });
+        autoCloseTimer.setRepeats(false);
+        autoCloseTimer.start();
+
+        notificationDialog.setVisible(true);
+    }
+
+    /**
+     * 귓속말 기록 수신 처리
+     */
+    public void onPrivateHistoryReceived(String targetId, List<ChatDto.PrivateRequest> messages, boolean hasMore) {
+        SwingUtilities.invokeLater(() -> {
+            PrivateMessageDialog dialog = PrivateMessageDialog.getOpenDialog(targetId);
+            if (dialog != null) {
+                dialog.onHistoryReceived(messages, hasMore);
+            }
+        });
     }
 
     /**
@@ -225,6 +433,19 @@ public class ChatPanel extends JPanel {
         userList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         userList.setCellRenderer(new UserListCellRenderer());
         userList.setFont(new Font("맑은 고딕", Font.PLAIN, 12));
+
+        // 더블클릭으로 귓속말 보내기
+        userList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    UserDto.UserInfo selectedUser = userList.getSelectedValue();
+                    if (selectedUser != null && !selectedUser.id().equals(ClientSession.getUserId())) {
+                        showPrivateMessageDialog(selectedUser.id(), selectedUser.name());
+                    }
+                }
+            }
+        });
 
         JScrollPane scrollPane = new JScrollPane(userList);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
@@ -366,6 +587,10 @@ public class ChatPanel extends JPanel {
             String currentUser = ClientSession.getUserId();
             boolean isMyMessage = sender != null && sender.equals(currentUser);
 
+            // TODO 수정사항 - 밑에 시간 더럽게 나오는 거 해결한 거 호출
+            // 가공된 시간 저장
+            String cleanTime = formatTimestamp(timestamp);
+
             // 발신자
             chatDocument.insertString(chatDocument.getLength(), sender + ": ", senderStyle);
 
@@ -374,7 +599,7 @@ public class ChatPanel extends JPanel {
             chatDocument.insertString(chatDocument.getLength(), content, messageStyle);
 
             // 타임스탬프
-            chatDocument.insertString(chatDocument.getLength(), " [" + timestamp + "]", timestampStyle);
+            chatDocument.insertString(chatDocument.getLength(), " [" + cleanTime + "]", timestampStyle); // 기존 timestamp -> cleanTime으로
 
             // 줄바꿈
             chatDocument.insertString(chatDocument.getLength(), "\n", null);
@@ -385,6 +610,34 @@ public class ChatPanel extends JPanel {
             log.error("메시지 표시 실패", e);
         }
     }
+
+    // TODO 수정사항 - 시간 너무 길게 나오는 거 해결
+    private String formatTimestamp(String rawTimestamp) {
+        if (rawTimestamp == null || rawTimestamp.isEmpty()) {
+            return LocalDateTime.now().format(DateTimeFormatter.ofPattern("M월 d일 HH:mm"));
+        }
+        try {
+            // ISO 포맷(2026-02-06T12:52:14...) 파싱
+            if (rawTimestamp.contains("T")) {
+                String[] parts = rawTimestamp.split("T");
+                String datePart = parts[0]; // "2026-02-06"
+                String timePart = parts[1]; // "12:52:14..."
+
+                // 날짜 파싱 (2026-02-06)
+                String[] dateSplit = datePart.split("-");
+                int month = Integer.parseInt(dateSplit[1]);
+                int day = Integer.parseInt(dateSplit[2]);
+
+                // 시간 추출 (12:52)
+                String hhMm = timePart.substring(0, 5);
+
+                return month + "월 " + day + "일 " + hhMm; // 결과: "2월 6일 12:52"
+            }
+        } catch (Exception e) {
+            log.warn("타임스탬프 변환 실패: {}", rawTimestamp);
+        }
+        return rawTimestamp;
+    } 
 
     /**
      * 시스템 메시지 추가
@@ -482,6 +735,227 @@ public class ChatPanel extends JPanel {
     }
 
     /**
+     * 채팅방 입장 요청
+     */
+    private void enterRoom(long roomId, String roomName) {
+        // 이미 같은 방에 있으면 무시
+        if (ClientSession.getCurrentRoomId() == roomId) {
+            log.debug("이미 해당 채팅방에 있습니다 - roomId: {}", roomId);
+            return;
+        }
+
+        log.debug("채팅방 입장 요청 - roomId: {}, roomName: {}", roomId, roomName);
+
+        try {
+            String enterCommand = TypeManagement.Room.ENTER + " " + roomId;
+            subject.sendMessage(enterCommand);
+        } catch (Exception e) {
+            log.error("채팅방 입장 요청 실패", e);
+            JOptionPane.showMessageDialog(
+                parentForm,
+                "채팅방 입장에 실패했습니다.",
+                "오류",
+                JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    /**
+     * 채팅방 입장 성공 처리
+     */
+    public void onRoomEntered(long roomId, List<String> users) {
+        SwingUtilities.invokeLater(() -> {
+            // 현재 방 정보 업데이트
+            ClientSession.setCurrentRoomId(roomId);
+
+            // 선택된 방 이름 가져오기
+            for (int i = 0; i < roomListModel.size(); i++) {
+                RoomDto.RoomSummary room = roomListModel.get(i);
+                if (room.roomId() == roomId) {
+                    currentRoomName = room.roomName();
+                    break;
+                }
+            }
+
+            currentRoomLabel.setText("현재 채팅방: " + currentRoomName);
+            exitRoomButton.setEnabled(true);
+            loadHistoryButton.setEnabled(true);
+
+            // 채팅 영역 초기화
+            clearChat();
+
+            // 입장 메시지
+            appendSystemMessage("'" + currentRoomName + "' 채팅방에 입장했습니다.");
+            if (users != null && !users.isEmpty()) {
+                appendSystemMessage("현재 참여자: " + String.join(", ", users));
+            }
+
+            // 채팅 기록 요청
+            requestChatHistory(roomId);
+
+            // 채팅방 목록 새로고침
+            try {
+                subject.sendMessage(TypeManagement.Room.LIST);
+            } catch (Exception e) {
+                log.error("채팅방 목록 새로고침 실패", e);
+            }
+        });
+    }
+
+    /**
+     * 현재 채팅방 퇴장
+     */
+    private void exitCurrentRoom() {
+        long roomId = ClientSession.getCurrentRoomId();
+        if (roomId <= 0) {
+            return;
+        }
+
+        int result = JOptionPane.showConfirmDialog(
+            parentForm,
+            "'" + currentRoomName + "' 채팅방에서 나가시겠습니까?",
+            "채팅방 퇴장",
+            JOptionPane.YES_NO_OPTION
+        );
+
+        if (result == JOptionPane.YES_OPTION) {
+            log.debug("채팅방 퇴장 요청 - roomId: {}", roomId);
+
+            try {
+                String exitCommand = TypeManagement.Room.EXIT + " " + roomId;
+                subject.sendMessage(exitCommand);
+            } catch (Exception e) {
+                log.error("채팅방 퇴장 요청 실패", e);
+                JOptionPane.showMessageDialog(
+                    parentForm,
+                    "채팅방 퇴장에 실패했습니다.",
+                    "오류",
+                    JOptionPane.ERROR_MESSAGE
+                );
+            }
+        }
+    }
+
+    /**
+     * 채팅방 퇴장 성공 처리
+     */
+    public void onRoomExited(long roomId, String message) {
+        SwingUtilities.invokeLater(() -> {
+            appendSystemMessage("'" + currentRoomName + "' 채팅방에서 퇴장했습니다.");
+
+            // 상태 초기화
+            ClientSession.setCurrentRoomId(0);
+            currentRoomName = "";
+            currentRoomLabel.setText("채팅방을 선택하세요");
+            exitRoomButton.setEnabled(false);
+            loadHistoryButton.setEnabled(false);
+            hasMoreHistory = false;
+            oldestMessageId = 0;
+
+            // 채팅 영역 초기화
+            clearChat();
+
+            // 채팅방 목록 새로고침
+            try {
+                subject.sendMessage(TypeManagement.Room.LIST);
+            } catch (Exception e) {
+                log.error("채팅방 목록 새로고침 실패", e);
+            }
+        });
+    }
+
+    /**
+     * 채팅 기록 요청
+     */
+    private void requestChatHistory(long roomId) {
+        log.debug("채팅 기록 요청 - roomId: {}", roomId);
+
+        try {
+            // 형식: "roomId limit beforeMessageId"
+            String historyCommand = TypeManagement.Chat.HISTORY + " " + roomId + " 50 0";
+            subject.sendMessage(historyCommand);
+        } catch (Exception e) {
+            log.error("채팅 기록 요청 실패", e);
+        }
+    }
+
+    /**
+     * 이전 기록 더 불러오기
+     */
+    private void loadMoreHistory() {
+        if (!hasMoreHistory || oldestMessageId <= 0) {
+            return;
+        }
+
+        long roomId = ClientSession.getCurrentRoomId();
+        log.debug("이전 채팅 기록 요청 - roomId: {}, beforeMessageId: {}", roomId, oldestMessageId);
+
+        try {
+            String historyCommand = TypeManagement.Chat.HISTORY + " " + roomId + " 50 " + oldestMessageId;
+            subject.sendMessage(historyCommand);
+        } catch (Exception e) {
+            log.error("이전 채팅 기록 요청 실패", e);
+        }
+    }
+
+    /**
+     * 채팅 기록 수신 처리
+     */
+    public void onChatHistoryReceived(long roomId, List<ChatDto.ChatMessage> messages, boolean hasMore) {
+        SwingUtilities.invokeLater(() -> {
+            this.hasMoreHistory = hasMore;
+            loadHistoryButton.setEnabled(hasMore);
+
+            if (messages != null && !messages.isEmpty()) {
+                // 가장 오래된 메시지 ID 저장 (다음 페이징을 위해)
+                oldestMessageId = messages.get(messages.size() - 1).messageId();
+
+                // 메시지를 역순으로 표시 (오래된 것부터)
+                for (int i = messages.size() - 1; i >= 0; i--) {
+                    ChatDto.ChatMessage msg = messages.get(i);
+                    appendMessage(
+                        msg.senderName() != null ? msg.senderName() : msg.senderId(),
+                        msg.content(),
+                        msg.timestamp()
+                    );
+                }
+
+                if (hasMore) {
+                    appendSystemMessage("'이전 기록' 버튼을 눌러 더 많은 메시지를 불러올 수 있습니다.");
+                }
+            } else {
+                appendSystemMessage("채팅 기록이 없습니다.");
+            }
+        });
+    }
+
+    /**
+     * 채팅방 메시지 동기화 수신 처리 (기존 기록 덮어씌우기)
+     */
+    public void onRoomChatSyncReceived(long roomId, List<ChatDto.ChatMessage> messages) {
+        SwingUtilities.invokeLater(() -> {
+            // 현재 방이 아니면 무시
+            if (ClientSession.getCurrentRoomId() != roomId) {
+                return;
+            }
+
+            // 기존 채팅 기록 삭제
+            clearChat();
+
+            // 새 기록으로 갱신 (정순으로 표시)
+            if (messages != null && !messages.isEmpty()) {
+                for (ChatDto.ChatMessage msg : messages) {
+                    appendMessage(
+                        msg.senderName() != null ? msg.senderName() : msg.senderId(),
+                        msg.content(),
+                        msg.timestamp()
+                    );
+                }
+            }
+        });
+    }
+
+    /**
      * 채팅 영역 초기화
      */
     public void clearChat() {
@@ -519,7 +993,7 @@ public class ChatPanel extends JPanel {
     /**
      * 유저 목록 셀 렌더러
      */
-    private static class UserListCellRenderer extends DefaultListCellRenderer {
+    private class UserListCellRenderer extends DefaultListCellRenderer {
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value,
                 int index, boolean isSelected, boolean cellHasFocus) {
@@ -528,16 +1002,48 @@ public class ChatPanel extends JPanel {
 
             if (value instanceof UserDto.UserInfo user) {
                 String status = user.online() ? "온라인" : "오프라인";
-                setText(String.format("%s (%s)", user.name(), status));
 
-                // 온라인 상태에 따라 색상 변경
-                if (!isSelected) {
-                    setForeground(user.online() ? new Color(46, 125, 50) : Color.GRAY);
+                // 읽지 않은 귓속말이 있으면 표시 추가
+                if (unreadPrivateMessages.contains(user.id())) {
+                    setText(String.format("● %s (%s)", user.name(), status));
+                    if (!isSelected) {
+                        setForeground(new Color(155, 89, 182)); // 보라색
+                    }
+                } else {
+                    setText(String.format("%s (%s)", user.name(), status));
+                    // 온라인 상태에 따라 색상 변경
+                    if (!isSelected) {
+                        setForeground(user.online() ? new Color(46, 125, 50) : Color.GRAY);
+                    }
                 }
             }
 
             setBorder(new EmptyBorder(5, 8, 5, 8));
             return this;
         }
+    }
+
+    /**
+     * 읽지 않은 귓속말 표시 추가
+     */
+    public void addUnreadPrivateMessage(String userId) {
+        unreadPrivateMessages.add(userId);
+        userList.repaint();
+    }
+
+    /**
+     * 읽지 않은 귓속말 표시 제거
+     */
+    public void removeUnreadPrivateMessage(String userId) {
+        unreadPrivateMessages.remove(userId);
+        userList.repaint();
+    }
+
+    /**
+     * 모든 읽지 않은 귓속말 표시 제거
+     */
+    public void clearUnreadPrivateMessages() {
+        unreadPrivateMessages.clear();
+        userList.repaint();
     }
 }

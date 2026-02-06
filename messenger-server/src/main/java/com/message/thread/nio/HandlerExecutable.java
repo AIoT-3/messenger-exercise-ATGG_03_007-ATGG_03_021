@@ -68,12 +68,14 @@ public class HandlerExecutable implements Executable {
 
             Object result = handler.execute(requestHeader, requestData);
 
+            log.debug("[핸들러 응답] 타입 확인후 소캣 등록 혹은 소캣 삭제");
             if (requestHeader.type().equals(TypeManagement.Auth.LOGIN)) {
                 SocketManagement.checkSocket(requestHeader.type(), result, channel.socket());
             } else if (requestHeader.type().equals(TypeManagement.Auth.LOGOUT)) {
                 SocketManagement.checkSocket(requestHeader.type(), requestHeader, channel.socket());
             }
 
+            log.error("[디스페치] 응답");
             return dispatchMapper.toResult(result);
 
         } catch (Exception e) {

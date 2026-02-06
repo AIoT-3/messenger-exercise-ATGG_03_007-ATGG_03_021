@@ -17,6 +17,6 @@ public class RoomListHandler implements Handler {
 
     @Override
     public Object execute(HeaderDto.RequestHeader header, RequestDataDto data) {
-        return roomService.getRoomList(header.sessionId());
+        return roomService.getRoomList();
     }
 }

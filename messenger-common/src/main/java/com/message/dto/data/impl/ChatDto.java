@@ -57,6 +57,28 @@ public class ChatDto {
         }
     }
 
+    @MessageDataType(TypeManagement.Chat.PRIVATE_HISTORY)
+    public record PrivateHistoryRequest(
+            String targetId
+    ) implements RequestDataDto {
+        @Override
+        public String getType() {
+            return TypeManagement.Chat.PRIVATE_HISTORY;
+        }
+    }
+
+    @MessageDataType(TypeManagement.Chat.PRIVATE_HISTORY_SUCCESS)
+    public record PrivateHistoryResponse(
+            String targetId,
+            List<PrivateRequest> messages,
+            boolean hasMore
+    ) implements ResponseDataDto {
+        @Override
+        public String getType() {
+            return TypeManagement.Chat.PRIVATE_HISTORY_SUCCESS;
+        }
+    }
+
     @MessageDataType(TypeManagement.Chat.HISTORY)
     public record HistoryRequest(
             long roomId,

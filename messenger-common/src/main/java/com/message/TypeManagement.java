@@ -43,6 +43,10 @@ public class TypeManagement {
         public static final String PRIVATE_SUCCESS = "PRIVATE-MESSAGE-SUCCESS";
         public static final String PRIVATE_MESSAGE_RECEIVE = "PRIVATE-MESSAGE-RECEIVE";
         
+        // 귓속말 기록
+        public static final String PRIVATE_HISTORY = "PRIVATE-MESSAGE-HISTORY";
+        public static final String PRIVATE_HISTORY_SUCCESS = "PRIVATE-MESSAGE-HISTORY-SUCCESS";
+
         // 메시지 기록
         public static final String HISTORY = "CHAT-MESSAGE-HISTORY";
         public static final String HISTORY_SUCCESS = "CHAT-MESSAGE-HISTORY-SUCCESS";
@@ -64,6 +68,13 @@ public class TypeManagement {
         // 방 나가기
         public static final String EXIT = "CHAT-ROOM-EXIT";
         public static final String EXIT_SUCCESS = "CHAT-ROOM-EXIT-SUCCESS";
+    }
+
+    public static class Sync {
+        public static final String USER = "SYNC-USER";
+        public static final String ROOM = "SYNC-ROOM";
+        public static final String ROOM_CHAT = "SYNC-ROOM-CHAT";
+        public static final String PRIVATE_CHAT = "SYNC-PRIVATE-CHAT";
     }
 
     public static final Map<String, Class<? extends RequestDataDto>> requestDataDtoClassMap = new HashMap<>();

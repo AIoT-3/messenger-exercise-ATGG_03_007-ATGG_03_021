@@ -10,6 +10,7 @@ import com.message.dto.data.impl.AuthDto;
 import com.message.dto.data.impl.ChatDto;
 import com.message.dto.data.impl.ErrorDto;
 import com.message.dto.data.impl.RoomDto;
+import com.message.dto.data.impl.SynchronizedDto;
 import com.message.dto.data.impl.UserDto;
 import com.message.subject.EventType;
 import com.message.ui.form.MessageClientForm;
@@ -75,9 +76,19 @@ public class ResponseMessageAction implements MessageAction {
             case TypeManagement.Auth.LOGOUT_SUCCESS -> handleLogoutSuccess(response);
             case TypeManagement.Chat.MESSAGE_SUCCESS -> handleChatMessageSuccess(response);
             case TypeManagement.Chat.PRIVATE_SUCCESS -> handlePrivateMessageSuccess(response);
+            case TypeManagement.Chat.MESSAGE_RECEIVE -> handleChatMessageReceive(response);
+            case TypeManagement.Chat.PRIVATE_MESSAGE_RECEIVE -> handlePrivateMessageReceive(response);
+            case TypeManagement.Chat.HISTORY_SUCCESS -> handleChatHistorySuccess(response);
             case TypeManagement.Room.LIST_SUCCESS -> handleRoomListSuccess(response);
             case TypeManagement.Room.CREATE_SUCCESS -> handleRoomCreateSuccess(response);
+            case TypeManagement.Room.ENTER_SUCCESS -> handleRoomEnterSuccess(response);
+            case TypeManagement.Room.EXIT_SUCCESS -> handleRoomExitSuccess(response);
             case TypeManagement.User.LIST_SUCCESS -> handleUserListSuccess(response);
+            case TypeManagement.Sync.USER -> handleUserSync(response);
+            case TypeManagement.Sync.ROOM -> handleRoomSync(response);
+            case TypeManagement.Sync.ROOM_CHAT -> handleRoomChatSync(response);
+            case TypeManagement.Sync.PRIVATE_CHAT -> handlePrivateChatSync(response);
+            case TypeManagement.Chat.PRIVATE_HISTORY_SUCCESS -> handlePrivateHistorySuccess(response);
             case TypeManagement.ERROR -> handleErrorResponse(response);
             default -> log.debug("처리되지 않은 응답 타입: {}", type);
         }
@@ -160,6 +171,141 @@ public class ResponseMessageAction implements MessageAction {
         if (response.data() instanceof UserDto.UserListResponse listResponse) {
             log.info("사용자 목록 수신 - {} 명의 유저", listResponse.users() != null ? listResponse.users().size() : 0);
             form.updateUserList(listResponse.users());
+        }
+    }
+
+    /**
+     * 채팅방 입장 성공 처리
+     */
+    private void handleRoomEnterSuccess(ResponseDto response) {
+        if (response.data() instanceof RoomDto.EnterResponse enterResponse) {
+            log.info("채팅방 입장 성공 - roomId: {}, users: {}", enterResponse.roomId(), enterResponse.users());
+            form.onRoomEntered(enterResponse.roomId(), enterResponse.users());
+        }
+    }
+
+    /**
+     * 채팅방 퇴장 성공 처리
+     */
+    private void handleRoomExitSuccess(ResponseDto response) {
+        if (response.data() instanceof RoomDto.ExitResponse exitResponse) {
+            log.info("채팅방 퇴장 성공 - roomId: {}", exitResponse.roomId());
+            form.onRoomExited(exitResponse.roomId(), exitResponse.message());
+        }
+    }
+
+    /**
+     * 채팅 기록 조회 성공 처리
+     */
+    private void handleChatHistorySuccess(ResponseDto response) {
+        if (response.data() instanceof ChatDto.HistoryResponse historyResponse) {
+            log.info("채팅 기록 수신 - roomId: {}, messages: {}, hasMore: {}",
+                historyResponse.roomId(),
+                historyResponse.messages() != null ? historyResponse.messages().size() : 0,
+                historyResponse.hasMore());
+            form.onChatHistoryReceived(historyResponse.roomId(), historyResponse.messages(), historyResponse.hasMore());
+        }
+    }
+
+    /**
+     * 실시간 채팅 메시지 수신 처리 (서버 푸시)
+     */
+    private void handleChatMessageReceive(ResponseDto response) {
+        if (response.data() instanceof ChatDto.ChatMessage chatMessage) {
+            log.debug("실시간 채팅 메시지 수신 - sender: {}, content: {}", chatMessage.senderId(), chatMessage.content());
+            form.appendChatMessage(
+                chatMessage.senderName() != null ? chatMessage.senderName() : chatMessage.senderId(),
+                chatMessage.content(),
+                chatMessage.timestamp()
+            );
+        }
+    }
+
+    /**
+     * 실시간 귓속말 수신 처리 (서버 푸시)
+     */
+    private void handlePrivateMessageReceive(ResponseDto response) {
+        if (response.data() instanceof ChatDto.PrivateResponse privateResponse) {
+            String timestamp = response.header().timestamp()
+                .format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+
+            // 귓속말 수신 알림
+            form.onPrivateMessageReceived(
+                privateResponse.senderId(),
+                privateResponse.message(),
+                timestamp
+            );
+        }
+    }
+
+    /**
+     * 유저 목록 동기화 처리 (서버 푸시)
+     * 다른 유저 로그인/로그아웃 시 호출
+     */
+    private void handleUserSync(ResponseDto response) {
+        if (response.data() instanceof SynchronizedDto.UserSync userSync) {
+            log.info("유저 목록 동기화 수신 - {} 명의 유저", userSync.users() != null ? userSync.users().size() : 0);
+            form.updateUserList(userSync.users());
+            form.appendSystemMessage("유저 목록이 갱신되었습니다.");
+        }
+    }
+
+    /**
+     * 채팅방 목록 동기화 처리 (서버 푸시)
+     * 채팅방 생성/삭제 시 호출
+     */
+    private void handleRoomSync(ResponseDto response) {
+        if (response.data() instanceof RoomDto.ListResponse listResponse) {
+            log.info("채팅방 목록 동기화 수신 - {} 개의 방", listResponse.rooms() != null ? listResponse.rooms().size() : 0);
+            form.updateRoomList(listResponse.rooms());
+            form.appendSystemMessage("채팅방 목록이 갱신되었습니다.");
+        }
+    }
+
+    /**
+     * 채팅방 메시지 동기화 처리 (서버 푸시)
+     * 다른 유저가 채팅방에 메시지를 보낼 때 호출
+     */
+    private void handleRoomChatSync(ResponseDto response) {
+        if (response.data() instanceof SynchronizedDto.HistorySyncResponse historySync) {
+            log.debug("채팅방 메시지 동기화 수신 - roomId: {}", historySync.roomId());
+            // 기존 기록을 덮어씌우고 새 기록으로 갱신
+            form.onRoomChatSyncReceived(historySync.roomId(), historySync.messages());
+        }
+    }
+
+    /**
+     * 귓속말 동기화 처리 (서버 푸시)
+     * 다른 유저가 귓속말을 보낼 때 호출
+     */
+    private void handlePrivateChatSync(ResponseDto response) {
+        if (response.data() instanceof SynchronizedDto.PrivateSyncResponse privateSync) {
+            String timestamp = response.header().timestamp()
+                .format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+
+            // 귓속말 수신 알림
+            form.onPrivateMessageReceived(
+                privateSync.senderId(),
+                privateSync.message(),
+                timestamp
+            );
+        }
+    }
+
+    /**
+     * 귓속말 기록 조회 성공 처리
+     */
+    private void handlePrivateHistorySuccess(ResponseDto response) {
+        if (response.data() instanceof ChatDto.PrivateHistoryResponse historyResponse) {
+            log.info("귓속말 기록 수신 - targetId: {}, messages: {}, hasMore: {}",
+                historyResponse.targetId(),
+                historyResponse.messages() != null ? historyResponse.messages().size() : 0,
+                historyResponse.hasMore());
+            form.onPrivateHistoryReceived(
+                historyResponse.targetId(),
+                historyResponse.messages(),
+                historyResponse.hasMore()
+            );
         }
     }
 

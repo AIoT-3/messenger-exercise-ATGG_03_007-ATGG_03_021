@@ -9,7 +9,7 @@ public class ServerNioMain {
         MessageNioServer messageNioServer = new MessageNioServer();
         Thread thread = new Thread(messageNioServer);
         thread.start();
-        log.info("NIO기반 서버를 열었스빈다.");
+        log.info("NIO 기반 서버가 열렸습니다.");
 
         try {
             thread.join();

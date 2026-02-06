@@ -39,7 +39,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public RoomDto.ListResponse getRoomList(String sessionId) {
+    public RoomDto.ListResponse getRoomList() {
         // 모든 방 가져오기, 변환
         List<RoomDto.RoomSummary> summaries = RoomManagement.getAllRooms().stream()
                 .map(room -> new RoomDto.RoomSummary(
@@ -60,10 +60,11 @@ public class RoomServiceImpl implements RoomService {
             throw new BusinessException(ErrorManagement.Room.NOT_FOUND, "채팅방을 찾을 수 없습니다.", 404);
         }
 
-        // 방에 입장 (세션 아이디 추가)
-        room.addParticipant(sessionId);
+        // 방에 입장 (유저 아이디 추가)
+        String userId = SessionManagement.getUserId(sessionId);
+        room.addParticipant(userId);
 
-        List<String> userList = room.getParticipantSessionIds().stream()
+        List<String> userList = room.getParticipantUserIds().stream()
                 .map(SessionManagement::getUserId) // 여기서부터
                 .filter(Objects::nonNull) // 널체크함
                 .toList();
@@ -83,7 +84,8 @@ public class RoomServiceImpl implements RoomService {
         }
 
         // 방이 존재한다면 나가라
-        room.removeParticipant(sessionId);
+        String userId = SessionManagement.getUserId(sessionId);
+        room.removeParticipant(userId);
         log.debug("[채팅방 나가기 완료] RoomId: {}, SessionId: {}", request.roomId(), sessionId);
     }
 }

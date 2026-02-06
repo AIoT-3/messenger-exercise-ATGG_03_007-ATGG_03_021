@@ -6,8 +6,10 @@ import com.message.dto.HeaderDto;
 import com.message.dto.ResponseDto;
 import com.message.dto.data.ResponseDataDto;
 import com.message.dto.data.impl.ChatDto;
+import com.message.dto.data.impl.SynchronizedDto;
 import com.message.entity.RoomEntity;
 import com.message.entity.chat.RoomChatEntity;
+import com.message.entity.chat.WhisperChatEntity;
 import com.message.exception.custom.BusinessException;
 import com.message.mapper.chat.ChatMapper;
 import com.message.mapper.chat.impl.ChatMapperImpl;
@@ -15,6 +17,8 @@ import com.message.service.chat.ChatService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 @Slf4j
@@ -42,7 +46,7 @@ public class ChatServiceImpl implements ChatService {
         room.getChatList().add(roomChatEntity);
 
         // 브로드캐스트
-        broadcast(room, roomChatEntity, messageId);
+//        broadcast(room, roomChatEntity, messageId);
 
         return new ChatDto.MessageResponse(room.getRoomId(), messageId);
     }
@@ -61,7 +65,7 @@ public class ChatServiceImpl implements ChatService {
         );
 
         // String 변환 없이 객체 통째로 전달 -> SocketManagement에서 알아서 할거임
-        for (String targetSessionId : room.getParticipantSessionIds()) {
+        for (String targetSessionId : room.getParticipantUserIds()) {
             SocketManagement.sendMessage(targetSessionId, pushPacket);
         }
     }
@@ -84,11 +88,14 @@ public class ChatServiceImpl implements ChatService {
         long messageId = AtomicLongIdManagement.getChatMessageIdSequenceIncreateAndGet();
 
         // 매퍼 써서 디티오 생성
-        ChatDto.ChatMessage privateData = chatMapper.toChatMessage(new RoomChatEntity(request.message(), senderId, messageId), messageId);
+//        ChatDto.ChatMessage privateData = chatMapper.toChatMessage(new RoomChatEntity(request.message(), senderId, messageId), messageId);
 
-        sendToClient(receiverSessionId, TypeManagement.Chat.PRIVATE_MESSAGE_RECEIVE, privateData, messageId);
+//        sendToClient(receiverSessionId, TypeManagement.Chat.PRIVATE_MESSAGE_RECEIVE, privateData, messageId);
 
-        return chatMapper.toPrivateResponse(senderId, request.receiverId(), messageId);
+        ChatDto.PrivateResponse privateResponse = chatMapper.toPrivateResponse(senderId, request.receiverId(), messageId);
+        MessageHistoryManagement.saveWhisper(request);
+
+        return privateResponse;
     }
 
     @Override
@@ -106,6 +113,19 @@ public class ChatServiceImpl implements ChatService {
         return chatMapper.toHistoryResponse(room.getRoomId(), room.getChatList());
     }
 
+    @Override
+    public ChatDto.HistoryResponse getHistoryAllByRoomId(long roomId){
+        RoomEntity room = RoomManagement.getRoom(roomId);
+
+        return chatMapper.toHistoryResponse(room.getRoomId(), room.getChatList());
+    }
+
+    @Override
+    public List<String> getRoomInUserIds(long roomId) {
+        RoomEntity room = RoomManagement.getRoom(roomId);
+        return new ArrayList<> (room.getParticipantUserIds());
+    }
+
     // 중복 부분 줄이려고 만든 공통 메서드
     private void sendToClient(String targetSessionId, String type, ResponseDataDto data, long messageId) {
         // 패킷 포장 (헤더 생성)
@@ -113,6 +133,16 @@ public class ChatServiceImpl implements ChatService {
 
         // SocketManagement가 내부적으로 제이슨 변환을 처리하므로 그냥 호출만 하면 됨
         SocketManagement.sendMessage(targetSessionId, pushPacket);
+    }
+
+    @Override
+    public List<ChatDto.PrivateRequest> getPrivateHistory(String sessionId, String targetId) {
+        if(Objects.isNull(sessionId) || Objects.isNull(targetId) ||
+        sessionId.isBlank() || targetId.isBlank()){
+            throw new IllegalArgumentException();
+        }
+
+        return MessageHistoryManagement.getWhisperHistory(sessionId, targetId);
     }
 }
 
