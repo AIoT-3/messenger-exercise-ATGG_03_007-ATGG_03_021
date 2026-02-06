@@ -338,4 +338,77 @@ public class ChatCommand {
             }
         }
     }
+
+    /**
+     * 귓속말 기록 조회 요청 Command
+     */
+    public static class PrivateHistorySendCommand extends SendCommand {
+        private static final Logger log = LoggerFactory.getLogger(PrivateHistorySendCommand.class);
+
+        @Override
+        public String getType() {
+            return TypeManagement.Chat.PRIVATE_HISTORY;
+        }
+
+        @Override
+        public Object execute(MessageContent.Message message) {
+            MessageContent.RequestMessage requestMessage = (MessageContent.RequestMessage) message;
+            String targetId = requestMessage.content();
+
+            if (targetId == null || targetId.trim().isEmpty()) {
+                throw new IllegalArgumentException("대상 사용자 ID가 비어있습니다.");
+            }
+
+            HeaderDto.RequestHeader header = createRequestHeader(TypeManagement.Chat.PRIVATE_HISTORY);
+            ChatDto.PrivateHistoryRequest data = new ChatDto.PrivateHistoryRequest(targetId.trim());
+
+            try {
+                String json = mapper.writeValueAsString(new RequestDto(header, data));
+                log.debug("귓속말 기록 조회 요청 JSON 생성: {}", json);
+                return json;
+            } catch (JsonProcessingException e) {
+                log.error("귓속말 기록 조회 요청 JSON 변환 실패", e);
+                throw new RuntimeException("귓속말 기록 조회 요청 생성 실패", e);
+            }
+        }
+    }
+
+    /**
+     * 귓속말 기록 조회 응답 Command
+     */
+    public static class PrivateHistoryReceiveCommand extends ReceiveCommand {
+        private static final Logger log = LoggerFactory.getLogger(PrivateHistoryReceiveCommand.class);
+
+        @Override
+        public String getType() {
+            return TypeManagement.Chat.PRIVATE_HISTORY_SUCCESS;
+        }
+
+        @Override
+        public Object execute(MessageContent.Message message) {
+            MessageContent.ResponseMessage responseMessage = (MessageContent.ResponseMessage) message;
+
+            try {
+                HeaderDto.ResponseHeader header = mapper.treeToValue(
+                    responseMessage.header(),
+                    HeaderDto.ResponseHeader.class
+                );
+
+                ChatDto.PrivateHistoryResponse data = mapper.treeToValue(
+                    responseMessage.data(),
+                    ChatDto.PrivateHistoryResponse.class
+                );
+
+                log.debug("귓속말 기록 수신 - targetId: {}, messages: {}, hasMore: {}",
+                    data.targetId(),
+                    data.messages() != null ? data.messages().size() : 0,
+                    data.hasMore());
+
+                return new ResponseDto(header, data);
+            } catch (JsonProcessingException e) {
+                log.error("귓속말 기록 응답 파싱 실패", e);
+                throw new RuntimeException("귓속말 기록 응답 처리 실패", e);
+            }
+        }
+    }
 }

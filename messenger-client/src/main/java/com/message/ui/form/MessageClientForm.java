@@ -98,7 +98,7 @@ public class MessageClientForm extends JFrame {
      */
     public void onLoginFailed(String errorMessage) {
         SwingUtilities.invokeLater(() -> {
-            loginPanel.setEnabled(true);
+            loginPanel.onLoginFailed(errorMessage);
             JOptionPane.showMessageDialog(this, errorMessage, "로그인 실패", JOptionPane.ERROR_MESSAGE);
         });
     }
@@ -195,6 +195,33 @@ public class MessageClientForm extends JFrame {
     public void onChatHistoryReceived(long roomId, List<ChatDto.ChatMessage> messages, boolean hasMore) {
         SwingUtilities.invokeLater(() -> {
             chatPanel.onChatHistoryReceived(roomId, messages, hasMore);
+        });
+    }
+
+    /**
+     * 귓속말 수신 처리 (알림 포함)
+     */
+    public void onPrivateMessageReceived(String senderId, String message, String timestamp) {
+        SwingUtilities.invokeLater(() -> {
+            chatPanel.onPrivateMessageReceived(senderId, message, timestamp);
+        });
+    }
+
+    /**
+     * 채팅방 메시지 동기화 수신 처리 (기존 기록 덮어씌우기)
+     */
+    public void onRoomChatSyncReceived(long roomId, List<ChatDto.ChatMessage> messages) {
+        SwingUtilities.invokeLater(() -> {
+            chatPanel.onRoomChatSyncReceived(roomId, messages);
+        });
+    }
+
+    /**
+     * 귓속말 기록 수신 처리
+     */
+    public void onPrivateHistoryReceived(String targetId, List<ChatDto.PrivateRequest> messages, boolean hasMore) {
+        SwingUtilities.invokeLater(() -> {
+            chatPanel.onPrivateHistoryReceived(targetId, messages, hasMore);
         });
     }
 

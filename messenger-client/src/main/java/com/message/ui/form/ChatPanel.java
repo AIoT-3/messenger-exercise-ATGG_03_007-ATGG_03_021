@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
+import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.text.*;
@@ -21,7 +22,9 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 채팅 화면 패널
@@ -59,6 +62,9 @@ public class ChatPanel extends JPanel {
     private Style otherMessageStyle;
     private Style timestampStyle;
     private Style senderStyle;
+
+    // 읽지 않은 귓속말이 있는 유저 ID 목록
+    private final Set<String> unreadPrivateMessages = new HashSet<>();
 
     public ChatPanel(MessageClientForm parentForm, Subject subject) {
         this.parentForm = parentForm;
@@ -283,40 +289,110 @@ public class ChatPanel extends JPanel {
      * 귓속말 다이얼로그 표시
      */
     private void showPrivateMessageDialog(String userId, String userName) {
-        String message = JOptionPane.showInputDialog(
-            parentForm,
-            userName + "님에게 보낼 귓속말을 입력하세요:",
-            "귓속말 보내기",
-            JOptionPane.PLAIN_MESSAGE
-        );
-
-        if (message != null && !message.trim().isEmpty()) {
-            sendPrivateMessage(userId, message.trim());
-        }
+        // 읽지 않은 귓속말 표시 제거
+        removeUnreadPrivateMessage(userId);
+        PrivateMessageDialog.openOrGet(parentForm, userId, userName, subject);
     }
 
     /**
-     * 귓속말 전송
+     * 귓속말 수신 처리 (알림 포함)
      */
-    private void sendPrivateMessage(String receiverId, String message) {
-        log.debug("귓속말 전송 - to: {}, message: {}", receiverId, message);
+    public void onPrivateMessageReceived(String senderId, String message, String timestamp) {
+        SwingUtilities.invokeLater(() -> {
+            // 열린 다이얼로그가 있으면 거기에 메시지 추가
+            PrivateMessageDialog dialog = PrivateMessageDialog.getOpenDialog(senderId);
+            if (dialog != null) {
+                dialog.onMessageReceived(senderId, message, timestamp);
 
-        try {
-            // 형식: "PRIVATE-MESSAGE receiverId message"
-            String privateCommand = TypeManagement.Chat.PRIVATE + " " + receiverId + " " + message;
-            subject.sendMessage(privateCommand);
+                // 다이얼로그가 열려있고 포커스되어 있으면 알림 안 띄움
+                if (dialog.isVisible() && dialog.isFocused()) {
+                    return;
+                }
+            }
 
-            // 내가 보낸 귓속말 표시
-            appendMessage("[귓속말 to " + receiverId + "]", message, getCurrentTimestamp());
-        } catch (Exception e) {
-            log.error("귓속말 전송 실패", e);
-            JOptionPane.showMessageDialog(
-                parentForm,
-                "귓속말 전송에 실패했습니다.",
-                "오류",
-                JOptionPane.ERROR_MESSAGE
-            );
+            // 유저 목록에 읽지 않은 귓속말 표시 추가
+            addUnreadPrivateMessage(senderId);
+
+            // 알림 표시 (논블로킹)
+            showPrivateMessageNotification(senderId, message);
+        });
+    }
+
+    /**
+     * 귓속말 알림 표시 (논블로킹 토스트 알림)
+     */
+    private void showPrivateMessageNotification(String senderId, String message) {
+        // 유저 이름 찾기
+        String senderName = senderId;
+        for (int i = 0; i < userListModel.size(); i++) {
+            UserDto.UserInfo user = userListModel.get(i);
+            if (user.id().equals(senderId)) {
+                senderName = user.name();
+                break;
+            }
         }
+
+        final String finalSenderName = senderName;
+        final String finalSenderId = senderId;
+
+        // 논블로킹 알림 다이얼로그 생성
+        JDialog notificationDialog = new JDialog(parentForm, "새 귓속말", false);
+        notificationDialog.setLayout(new BorderLayout());
+        notificationDialog.setSize(300, 120);
+        notificationDialog.setLocationRelativeTo(parentForm);
+
+        // 메시지 패널
+        JPanel messagePanel = new JPanel(new BorderLayout());
+        messagePanel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+        messagePanel.setBackground(new Color(155, 89, 182));
+
+        String displayMessage = message.length() > 50 ? message.substring(0, 50) + "..." : message;
+        JLabel label = new JLabel("<html><b>" + finalSenderName + "님의 귓속말:</b><br>" + displayMessage + "</html>");
+        label.setForeground(Color.WHITE);
+        messagePanel.add(label, BorderLayout.CENTER);
+
+        // 버튼 패널
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton replyButton = new JButton("답장하기");
+        JButton closeButton = new JButton("닫기");
+
+        replyButton.addActionListener(e -> {
+            notificationDialog.dispose();
+            // 읽지 않은 귓속말 표시 제거
+            removeUnreadPrivateMessage(finalSenderId);
+            PrivateMessageDialog.openOrGet(parentForm, finalSenderId, finalSenderName, subject);
+        });
+
+        closeButton.addActionListener(e -> notificationDialog.dispose());
+
+        buttonPanel.add(replyButton);
+        buttonPanel.add(closeButton);
+
+        notificationDialog.add(messagePanel, BorderLayout.CENTER);
+        notificationDialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        // 5초 후 자동 닫기
+        Timer autoCloseTimer = new Timer(5000, e -> {
+            if (notificationDialog.isVisible()) {
+                notificationDialog.dispose();
+            }
+        });
+        autoCloseTimer.setRepeats(false);
+        autoCloseTimer.start();
+
+        notificationDialog.setVisible(true);
+    }
+
+    /**
+     * 귓속말 기록 수신 처리
+     */
+    public void onPrivateHistoryReceived(String targetId, List<ChatDto.PrivateRequest> messages, boolean hasMore) {
+        SwingUtilities.invokeLater(() -> {
+            PrivateMessageDialog dialog = PrivateMessageDialog.getOpenDialog(targetId);
+            if (dialog != null) {
+                dialog.onHistoryReceived(messages, hasMore);
+            }
+        });
     }
 
     /**
@@ -822,6 +898,32 @@ public class ChatPanel extends JPanel {
     }
 
     /**
+     * 채팅방 메시지 동기화 수신 처리 (기존 기록 덮어씌우기)
+     */
+    public void onRoomChatSyncReceived(long roomId, List<ChatDto.ChatMessage> messages) {
+        SwingUtilities.invokeLater(() -> {
+            // 현재 방이 아니면 무시
+            if (ClientSession.getCurrentRoomId() != roomId) {
+                return;
+            }
+
+            // 기존 채팅 기록 삭제
+            clearChat();
+
+            // 새 기록으로 갱신 (정순으로 표시)
+            if (messages != null && !messages.isEmpty()) {
+                for (ChatDto.ChatMessage msg : messages) {
+                    appendMessage(
+                        msg.senderName() != null ? msg.senderName() : msg.senderId(),
+                        msg.content(),
+                        msg.timestamp()
+                    );
+                }
+            }
+        });
+    }
+
+    /**
      * 채팅 영역 초기화
      */
     public void clearChat() {
@@ -859,7 +961,7 @@ public class ChatPanel extends JPanel {
     /**
      * 유저 목록 셀 렌더러
      */
-    private static class UserListCellRenderer extends DefaultListCellRenderer {
+    private class UserListCellRenderer extends DefaultListCellRenderer {
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value,
                 int index, boolean isSelected, boolean cellHasFocus) {
@@ -868,16 +970,48 @@ public class ChatPanel extends JPanel {
 
             if (value instanceof UserDto.UserInfo user) {
                 String status = user.online() ? "온라인" : "오프라인";
-                setText(String.format("%s (%s)", user.name(), status));
 
-                // 온라인 상태에 따라 색상 변경
-                if (!isSelected) {
-                    setForeground(user.online() ? new Color(46, 125, 50) : Color.GRAY);
+                // 읽지 않은 귓속말이 있으면 표시 추가
+                if (unreadPrivateMessages.contains(user.id())) {
+                    setText(String.format("● %s (%s)", user.name(), status));
+                    if (!isSelected) {
+                        setForeground(new Color(155, 89, 182)); // 보라색
+                    }
+                } else {
+                    setText(String.format("%s (%s)", user.name(), status));
+                    // 온라인 상태에 따라 색상 변경
+                    if (!isSelected) {
+                        setForeground(user.online() ? new Color(46, 125, 50) : Color.GRAY);
+                    }
                 }
             }
 
             setBorder(new EmptyBorder(5, 8, 5, 8));
             return this;
         }
+    }
+
+    /**
+     * 읽지 않은 귓속말 표시 추가
+     */
+    public void addUnreadPrivateMessage(String userId) {
+        unreadPrivateMessages.add(userId);
+        userList.repaint();
+    }
+
+    /**
+     * 읽지 않은 귓속말 표시 제거
+     */
+    public void removeUnreadPrivateMessage(String userId) {
+        unreadPrivateMessages.remove(userId);
+        userList.repaint();
+    }
+
+    /**
+     * 모든 읽지 않은 귓속말 표시 제거
+     */
+    public void clearUnreadPrivateMessages() {
+        unreadPrivateMessages.clear();
+        userList.repaint();
     }
 }

@@ -6,8 +6,10 @@ import com.message.dto.HeaderDto;
 import com.message.dto.ResponseDto;
 import com.message.dto.data.ResponseDataDto;
 import com.message.dto.data.impl.ChatDto;
+import com.message.dto.data.impl.SynchronizedDto;
 import com.message.entity.RoomEntity;
 import com.message.entity.chat.RoomChatEntity;
+import com.message.entity.chat.WhisperChatEntity;
 import com.message.exception.custom.BusinessException;
 import com.message.mapper.chat.ChatMapper;
 import com.message.mapper.chat.impl.ChatMapperImpl;
@@ -86,11 +88,14 @@ public class ChatServiceImpl implements ChatService {
         long messageId = AtomicLongIdManagement.getChatMessageIdSequenceIncreateAndGet();
 
         // 매퍼 써서 디티오 생성
-        ChatDto.ChatMessage privateData = chatMapper.toChatMessage(new RoomChatEntity(request.message(), senderId, messageId), messageId);
+//        ChatDto.ChatMessage privateData = chatMapper.toChatMessage(new RoomChatEntity(request.message(), senderId, messageId), messageId);
 
 //        sendToClient(receiverSessionId, TypeManagement.Chat.PRIVATE_MESSAGE_RECEIVE, privateData, messageId);
 
-        return chatMapper.toPrivateResponse(senderId, request.receiverId(), messageId);
+        ChatDto.PrivateResponse privateResponse = chatMapper.toPrivateResponse(senderId, request.receiverId(), messageId);
+        MessageHistoryManagement.saveWhisper(request);
+
+        return privateResponse;
     }
 
     @Override
@@ -128,6 +133,16 @@ public class ChatServiceImpl implements ChatService {
 
         // SocketManagement가 내부적으로 제이슨 변환을 처리하므로 그냥 호출만 하면 됨
         SocketManagement.sendMessage(targetSessionId, pushPacket);
+    }
+
+    @Override
+    public List<ChatDto.PrivateRequest> getPrivateHistory(String sessionId, String targetId) {
+        if(Objects.isNull(sessionId) || Objects.isNull(targetId) ||
+        sessionId.isBlank() || targetId.isBlank()){
+            throw new IllegalArgumentException();
+        }
+
+        return MessageHistoryManagement.getWhisperHistory(sessionId, targetId);
     }
 }
 

@@ -43,6 +43,10 @@ public class TypeManagement {
         public static final String PRIVATE_SUCCESS = "PRIVATE-MESSAGE-SUCCESS";
         public static final String PRIVATE_MESSAGE_RECEIVE = "PRIVATE-MESSAGE-RECEIVE";
         
+        // 귓속말 기록
+        public static final String PRIVATE_HISTORY = "PRIVATE-MESSAGE-HISTORY";
+        public static final String PRIVATE_HISTORY_SUCCESS = "PRIVATE-MESSAGE-HISTORY-SUCCESS";
+
         // 메시지 기록
         public static final String HISTORY = "CHAT-MESSAGE-HISTORY";
         public static final String HISTORY_SUCCESS = "CHAT-MESSAGE-HISTORY-SUCCESS";

@@ -86,6 +86,9 @@ public class ResponseMessageAction implements MessageAction {
             case TypeManagement.User.LIST_SUCCESS -> handleUserListSuccess(response);
             case TypeManagement.Sync.USER -> handleUserSync(response);
             case TypeManagement.Sync.ROOM -> handleRoomSync(response);
+            case TypeManagement.Sync.ROOM_CHAT -> handleRoomChatSync(response);
+            case TypeManagement.Sync.PRIVATE_CHAT -> handlePrivateChatSync(response);
+            case TypeManagement.Chat.PRIVATE_HISTORY_SUCCESS -> handlePrivateHistorySuccess(response);
             case TypeManagement.ERROR -> handleErrorResponse(response);
             default -> log.debug("처리되지 않은 응답 타입: {}", type);
         }
@@ -226,8 +229,9 @@ public class ResponseMessageAction implements MessageAction {
             String timestamp = response.header().timestamp()
                 .format(DateTimeFormatter.ofPattern("HH:mm:ss"));
 
-            form.appendChatMessage(
-                "[귓속말 from " + privateResponse.senderId() + "]",
+            // 귓속말 수신 알림
+            form.onPrivateMessageReceived(
+                privateResponse.senderId(),
                 privateResponse.message(),
                 timestamp
             );
@@ -255,6 +259,53 @@ public class ResponseMessageAction implements MessageAction {
             log.info("채팅방 목록 동기화 수신 - {} 개의 방", listResponse.rooms() != null ? listResponse.rooms().size() : 0);
             form.updateRoomList(listResponse.rooms());
             form.appendSystemMessage("채팅방 목록이 갱신되었습니다.");
+        }
+    }
+
+    /**
+     * 채팅방 메시지 동기화 처리 (서버 푸시)
+     * 다른 유저가 채팅방에 메시지를 보낼 때 호출
+     */
+    private void handleRoomChatSync(ResponseDto response) {
+        if (response.data() instanceof SynchronizedDto.HistorySyncResponse historySync) {
+            log.debug("채팅방 메시지 동기화 수신 - roomId: {}", historySync.roomId());
+            // 기존 기록을 덮어씌우고 새 기록으로 갱신
+            form.onRoomChatSyncReceived(historySync.roomId(), historySync.messages());
+        }
+    }
+
+    /**
+     * 귓속말 동기화 처리 (서버 푸시)
+     * 다른 유저가 귓속말을 보낼 때 호출
+     */
+    private void handlePrivateChatSync(ResponseDto response) {
+        if (response.data() instanceof SynchronizedDto.PrivateSyncResponse privateSync) {
+            String timestamp = response.header().timestamp()
+                .format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+
+            // 귓속말 수신 알림
+            form.onPrivateMessageReceived(
+                privateSync.senderId(),
+                privateSync.message(),
+                timestamp
+            );
+        }
+    }
+
+    /**
+     * 귓속말 기록 조회 성공 처리
+     */
+    private void handlePrivateHistorySuccess(ResponseDto response) {
+        if (response.data() instanceof ChatDto.PrivateHistoryResponse historyResponse) {
+            log.info("귓속말 기록 수신 - targetId: {}, messages: {}, hasMore: {}",
+                historyResponse.targetId(),
+                historyResponse.messages() != null ? historyResponse.messages().size() : 0,
+                historyResponse.hasMore());
+            form.onPrivateHistoryReceived(
+                historyResponse.targetId(),
+                historyResponse.messages(),
+                historyResponse.hasMore()
+            );
         }
     }
 

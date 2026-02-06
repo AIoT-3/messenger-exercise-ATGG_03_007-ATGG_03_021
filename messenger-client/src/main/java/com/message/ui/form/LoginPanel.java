@@ -218,6 +218,18 @@ public class LoginPanel extends JPanel {
         userIdField.requestFocus();
     }
 
+    /**
+     * 로그인 실패 처리 (로딩 상태 해제 및 에러 메시지 표시)
+     */
+    public void onLoginFailed(String errorMessage) {
+        SwingUtilities.invokeLater(() -> {
+            setLoading(false);
+            showError(errorMessage);
+            passwordField.setText("");
+            passwordField.requestFocus();
+        });
+    }
+
     @Override
     public void setEnabled(boolean enabled) {
         super.setEnabled(enabled);

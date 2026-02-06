@@ -12,10 +12,10 @@ import com.message.mapper.sync.AbstractSyncResponseMapper;
 import java.time.OffsetDateTime;
 import java.util.List;
 
-public class WhisperSyncResponseMapper extends AbstractSyncResponseMapper<ChatDto.PrivateResponse> {
+public class WhisperSyncResponseMapper extends AbstractSyncResponseMapper<ChatDto.PrivateRequest> {
 
     @Override
-    public String toSyncResponse(List<ChatDto.PrivateResponse> list) {
+    public String toSyncResponse(List<ChatDto.PrivateRequest> list) {
         if(list.size() != 1){
             throw new IllegalArgumentException();
         }

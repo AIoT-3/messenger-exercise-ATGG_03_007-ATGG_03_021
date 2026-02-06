@@ -101,4 +101,80 @@ public class SyncCommand {
             }
         }
     }
+
+    /**
+     * 채팅방 메시지 동기화 Command
+     * 다른 유저가 채팅방에 메시지를 보낼 때 서버에서 푸시
+     */
+    public static class RoomChatSyncReceiveCommand extends ReceiveCommand {
+        private static final Logger log = LoggerFactory.getLogger(RoomChatSyncReceiveCommand.class);
+
+        @Override
+        public String getType() {
+            return TypeManagement.Sync.ROOM_CHAT;
+        }
+
+        @Override
+        public Object execute(MessageContent.Message message) {
+            MessageContent.ResponseMessage responseMessage = (MessageContent.ResponseMessage) message;
+
+            try {
+                HeaderDto.ResponseHeader header = mapper.treeToValue(
+                    responseMessage.header(),
+                    HeaderDto.ResponseHeader.class
+                );
+
+                SynchronizedDto.HistorySyncResponse data = mapper.treeToValue(
+                    responseMessage.data(),
+                    SynchronizedDto.HistorySyncResponse.class
+                );
+
+                log.debug("채팅방 메시지 동기화 수신 - roomId: {}, messages: {}",
+                    data.roomId(),
+                    data.messages() != null ? data.messages().size() : 0);
+
+                return new ResponseDto(header, data);
+            } catch (JsonProcessingException e) {
+                log.error("채팅방 메시지 동기화 파싱 실패", e);
+                throw new RuntimeException("채팅방 메시지 동기화 처리 실패", e);
+            }
+        }
+    }
+
+    /**
+     * 귓속말 동기화 Command
+     * 다른 유저가 귓속말을 보낼 때 서버에서 푸시
+     */
+    public static class PrivateChatSyncReceiveCommand extends ReceiveCommand {
+        private static final Logger log = LoggerFactory.getLogger(PrivateChatSyncReceiveCommand.class);
+
+        @Override
+        public String getType() {
+            return TypeManagement.Sync.PRIVATE_CHAT;
+        }
+
+        @Override
+        public Object execute(MessageContent.Message message) {
+            MessageContent.ResponseMessage responseMessage = (MessageContent.ResponseMessage) message;
+
+            try {
+                HeaderDto.ResponseHeader header = mapper.treeToValue(
+                    responseMessage.header(),
+                    HeaderDto.ResponseHeader.class
+                );
+
+                SynchronizedDto.PrivateSyncResponse data = mapper.treeToValue(
+                    responseMessage.data(),
+                    SynchronizedDto.PrivateSyncResponse.class
+                );
+
+                log.debug("귓속말 동기화 수신 - from: {}, to: {}", data.senderId(), data.receiverId());
+
+                return new ResponseDto(header, data);
+            } catch (JsonProcessingException e) {
+                log.error("귓속말 동기화 파싱 실패", e);
+                throw new RuntimeException("귓속말 동기화 처리 실패", e);
+            }
+        }
+    }
 }
