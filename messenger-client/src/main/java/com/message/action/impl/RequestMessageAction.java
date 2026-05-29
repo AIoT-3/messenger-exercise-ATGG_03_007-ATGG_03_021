@@ -2,7 +2,7 @@ package com.message.action.impl;
 
 import com.message.action.MessageAction;
 import com.message.cofig.AppConfig;
-import com.message.session.ClientSession;
+import com.message.connection.ClientConnection;
 import com.message.subject.EventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,8 +37,7 @@ public class RequestMessageAction implements MessageAction {
 
     private void sendToServer(String jsonMessage) {
         try {
-            // ClientSession에서 OutputStream을 가져옵니다. (Socket.getOutputStream())
-            OutputStream out = ClientSession.getOutputStream();
+            OutputStream out = ClientConnection.getInstance().getOutputStream();
 
             if (out != null) {
                 // 1. JSON을 UTF-8 바이트 배열로 변환 (중요: 길이는 여기서 구해야 함)

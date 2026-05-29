@@ -30,8 +30,8 @@ public class RoomExitHandler implements Handler {
         return exitResponse;
     }
 
-    private void sendSynchronizedRooms(RoomDto.ListResponse roomList){
+    private void sendSynchronizedRooms(RoomDto.ListResponse roomList) {
         String syncResponse = roomSyncResponseMapper.toSyncResponse(roomList.rooms());
-        SocketManagement.sendSynchronizedMessage(SessionManagement.getAllSessionIds(), syncResponse);
+        SocketManagement.getInstance().sendSynchronizedMessage(SessionManagement.getInstance().getAllSessionIds(), syncResponse);
     }
 }

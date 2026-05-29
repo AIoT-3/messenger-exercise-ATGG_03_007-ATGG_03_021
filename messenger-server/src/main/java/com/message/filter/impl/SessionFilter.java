@@ -22,7 +22,7 @@ public class SessionFilter implements Filter {
         HeaderDto.RequestHeader header = request.header();
         String s = header.sessionId();
 
-        boolean hasValidSession = (s != null && !s.trim().isEmpty() && SessionManagement.isExistedUuid(s));
+        boolean hasValidSession = (s != null && !s.trim().isEmpty() && SessionManagement.getInstance().isExistedUuid(s));
 
         boolean isSkipTarget = ServerConfig.SkipSessionMethodNames.contains(header.type());
 

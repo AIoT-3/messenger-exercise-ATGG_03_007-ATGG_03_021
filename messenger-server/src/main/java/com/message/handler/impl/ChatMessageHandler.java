@@ -37,11 +37,11 @@ public class ChatMessageHandler implements Handler {
 
     private void sendSynchronizedHistoryAll(long roomId, List<ChatDto.ChatMessage> historyList) {
         List<String> roomInUserIds = chatService.getRoomInUserIds(roomId);
-        List<String> sessionIdList = SessionManagement.getSessionIdList(roomInUserIds);
+        List<String> sessionIdList = SessionManagement.getInstance().getSessionIdList(roomInUserIds);
 
         chatHistorySyncResponseMapper.setRoomId(roomId);
         String syncResponse = chatHistorySyncResponseMapper.toSyncResponse(historyList);
 
-        SocketManagement.sendSynchronizedMessage(sessionIdList, syncResponse);
+        SocketManagement.getInstance().sendSynchronizedMessage(sessionIdList, syncResponse);
     }
 }

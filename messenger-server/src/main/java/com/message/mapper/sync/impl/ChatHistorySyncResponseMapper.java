@@ -28,7 +28,7 @@ public class ChatHistorySyncResponseMapper extends AbstractSyncResponseMapper<Ch
                 TypeManagement.Sync.ROOM_CHAT,
                 true,
                 OffsetDateTime.now(),
-                AtomicLongIdManagement.getResponseMessageIdSequenceIncreateAndGet()
+                AtomicLongIdManagement.getInstance().getResponseMessageIdSequenceIncrementAndGet()
         );
         SynchronizedDto.HistorySyncResponse historySyncResponse = new SynchronizedDto.HistorySyncResponse(roomId, list, false);
         ResponseDto responseDto = new ResponseDto(responseHeader, historySyncResponse);

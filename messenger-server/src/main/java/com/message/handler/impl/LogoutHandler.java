@@ -19,10 +19,30 @@ import java.util.List;
 @Slf4j
 public class LogoutHandler implements Handler {
 
-    private final AuthMapper authMapper = new AuthMapperImpl();
+    private final AuthMapper authMapper;
+    private final UserService userService;
+    private final UserSyncResponseMapper userSyncResponseMapper;
+    private final SessionManagement sessionManagement;
+    private final SocketManagement socketManagement;
 
-    private final UserService userService = new UserServiceImpl();
-    private final UserSyncResponseMapper userSyncResponseMapper = new UserSyncResponseMapper();
+    public LogoutHandler() {
+        this(
+            new AuthMapperImpl(),
+            new UserServiceImpl(),
+            new UserSyncResponseMapper(),
+            SessionManagement.getInstance(),
+            SocketManagement.getInstance()
+        );
+    }
+
+    LogoutHandler(AuthMapper authMapper, UserService userService, UserSyncResponseMapper userSyncResponseMapper,
+                  SessionManagement sessionManagement, SocketManagement socketManagement) {
+        this.authMapper = authMapper;
+        this.userService = userService;
+        this.userSyncResponseMapper = userSyncResponseMapper;
+        this.sessionManagement = sessionManagement;
+        this.socketManagement = socketManagement;
+    }
 
     @Override
     public String getMethod() {
@@ -31,28 +51,23 @@ public class LogoutHandler implements Handler {
 
     @Override
     public Object execute(HeaderDto.RequestHeader header, RequestDataDto data) {
-
-        // 요청 매핑 (헤더에서 sessionId 추출)
         String sessionId = header.sessionId();
+        sessionManagement.deleteSession(sessionId);
 
-        // 세션 삭제
-        SessionManagement.deleteSession(sessionId);
-
-        // 매퍼를 통해 성공 데이터 dto 생성
         AuthDto.LogoutResponse response = authMapper.toLogoutResponse();
         log.debug("[로그아웃 시도] 성공 - sessionId: {}", sessionId);
 
-        sendSynchronizedUsers(SessionManagement.getAllSessionIds());
+        sendSynchronizedUsers(sessionManagement.getAllSessionIds());
 
         return response;
     }
 
     private void sendSynchronizedUsers(List<String> sessionIds) {
-        if(sessionIds.isEmpty()){
+        if (sessionIds.isEmpty()) {
             log.debug("동기화할 유저가 없습니다.");
             return;
         }
-        String loginSuccessMessage = userSyncResponseMapper.toSyncResponse(userService.getUserList());
-        SocketManagement.sendSynchronizedMessage(sessionIds, loginSuccessMessage);
+        String message = userSyncResponseMapper.toSyncResponse(userService.getUserList());
+        socketManagement.sendSynchronizedMessage(sessionIds, message);
     }
 }

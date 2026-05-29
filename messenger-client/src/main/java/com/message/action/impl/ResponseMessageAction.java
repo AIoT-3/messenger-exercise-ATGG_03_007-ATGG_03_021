@@ -12,6 +12,7 @@ import com.message.dto.data.impl.ErrorDto;
 import com.message.dto.data.impl.RoomDto;
 import com.message.dto.data.impl.SynchronizedDto;
 import com.message.dto.data.impl.UserDto;
+import com.message.session.ClientSession;
 import com.message.subject.EventType;
 import com.message.ui.form.MessageClientForm;
 import org.slf4j.Logger;
@@ -323,19 +324,19 @@ public class ResponseMessageAction implements MessageAction {
      * 실패 응답 처리
      */
     private void handleError(ResponseDto response) {
-        String type = response.header().type();
         String errorMessage = "요청 처리에 실패했습니다.";
+        String errorCode = "UNKNOWN";
 
         if (response.data() instanceof ErrorDto errorDto) {
             errorMessage = errorDto.message();
-            form.showError(errorDto.code(), errorMessage);
-        } else {
-            form.showError("UNKNOWN", errorMessage);
+            errorCode = errorDto.code();
         }
 
-        // 로그인 실패의 경우 특별 처리
-        if (type.contains("LOGIN")) {
+        // 미인증 상태에서 에러 = 로그인 실패. setLoading(false)를 보장하기 위해 onLoginFailed 호출
+        if (!ClientSession.isAuthenticated()) {
             form.onLoginFailed(errorMessage);
+        } else {
+            form.showError(errorCode, errorMessage);
         }
     }
 }

@@ -21,12 +21,19 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class SocketManagement {
-    // 세션 아이디 -> 실제 소켓
-    private static final Map<String, Socket> socketMap = new ConcurrentHashMap<>();
 
-    private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    private static final SocketManagement INSTANCE = new SocketManagement();
 
-    public static void addSocket(String sessionId, Socket socket) {
+    private final Map<String, Socket> socketMap = new ConcurrentHashMap<>();
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+
+    private SocketManagement() {}
+
+    public static SocketManagement getInstance() {
+        return INSTANCE;
+    }
+
+    public void addSocket(String sessionId, Socket socket) {
         if (Objects.isNull(sessionId) || Objects.isNull(socket)) {
             return;
         }
@@ -34,15 +41,15 @@ public class SocketManagement {
         log.debug("[SocketManagement] 소켓 등록 - sessionId: {}", sessionId);
     }
 
-    public static void removeSocket(String sessionId) {
+    public void removeSocket(String sessionId) {
         if (Objects.nonNull(sessionId)) {
             socketMap.remove(sessionId);
             log.debug("[SocketManagement] 소켓 제거: sessionId: {}", sessionId);
         }
     }
 
-    public static void removeSocket(Socket socket){
-        if(Objects.nonNull(socket) || socketMap.containsValue(socket)){
+    public void removeSocket(Socket socket) {
+        if (Objects.nonNull(socket) && socketMap.containsValue(socket)) {
             socketMap.entrySet().stream()
                     .filter(entry -> entry.getValue().equals(socket))
                     .findFirst()
@@ -50,21 +57,21 @@ public class SocketManagement {
         }
     }
 
-    public static void checkSocket(String type, Object o, Socket socket) {
+    public void checkSocket(String type, Object o, Socket socket) {
         try {
             switch (type) {
                 case TypeManagement.Auth.LOGIN -> {
                     if (o instanceof AuthDto.LoginResponse response) {
                         addSocket(response.sessionId(), socket);
                     } else {
-                        throw new IllegalArgumentException();
+                        throw new BusinessException(ErrorManagement.Request.IS_NULL, "LOGIN 응답 객체가 올바르지 않습니다.", 400);
                     }
                 }
                 case TypeManagement.Auth.LOGOUT -> {
                     if (o instanceof HeaderDto.RequestHeader header) {
                         removeSocket(header.sessionId());
                     } else {
-                        throw new IllegalArgumentException();
+                        throw new BusinessException(ErrorManagement.Request.IS_NULL, "LOGOUT 헤더 객체가 올바르지 않습니다.", 400);
                     }
                 }
             }
@@ -73,19 +80,17 @@ public class SocketManagement {
         }
     }
 
-    public static Socket getSocket(String sessionId) {
+    public Socket getSocket(String sessionId) {
         if (Objects.isNull(sessionId) || sessionId.isBlank()) {
             throw new BusinessException(ErrorManagement.Session.NOT_FOUND, "존재하지 않는 세션입니다.", 404);
         }
         return socketMap.get(sessionId);
     }
 
-    public static List<Socket> getSocketList(List<String> sessionIdList) {
+    public List<Socket> getSocketList(List<String> sessionIdList) {
         if (Objects.isNull(sessionIdList) || sessionIdList.isEmpty()) {
-             return Collections.emptyList(); // TODO 이렇게 빈 리스트 반환하는게 낫지 않나?
-//            throw new BusinessException(ErrorManagement.Session.NOT_FOUND, "존재하지 않는 세션아이디 리스트입니다.", 404);
+            return Collections.emptyList();
         }
-
         Set<String> sessionIdSet = new HashSet<>(sessionIdList);
         return socketMap.entrySet().stream()
                 .filter(s -> sessionIdSet.contains(s.getKey()))
@@ -93,7 +98,7 @@ public class SocketManagement {
                 .toList();
     }
 
-    public static void sendMessage(String sessionId, Object data) {
+    public void sendMessage(String sessionId, Object data) {
         Socket socket = getSocket(sessionId);
 
         if (Objects.isNull(socket) || socket.isClosed()) {
@@ -102,8 +107,6 @@ public class SocketManagement {
         }
 
         try {
-            // 여기서 제이슨 직접 변환. 서비스 쪽 일 덜어주기
-            // data가 이미 String이면 그대로 쓰고, 객체면 제이슨으로 변환
             String json = (data instanceof String) ? (String) data : objectMapper.writeValueAsString(data);
 
             PrintWriter out = new PrintWriter(socket.getOutputStream());
@@ -117,7 +120,7 @@ public class SocketManagement {
         }
     }
 
-    public static void sendSynchronizedMessage(List<String> sessionIds, String message){
+    public void sendSynchronizedMessage(List<String> sessionIds, String message) {
         log.debug("[동기화 메시지] 송신 메시지 : {}", message);
         List<Socket> socketList = getSocketList(sessionIds);
         log.debug("[동기화 메시지] 동기화 할 유저수 : {}", socketList.size());
@@ -126,16 +129,14 @@ public class SocketManagement {
         socketList.forEach(s -> {
             log.debug("[소캣 통신] 소캣 종류:{}", Objects.isNull(s.getChannel()) ? "일반 소캣" : "채널 소캣");
             try {
-                if(Objects.nonNull(s.getChannel())){
-                    // NIO 채널 기반 소켓인 경우 (비블로킹/블로킹 모두 대응)
+                if (Objects.nonNull(s.getChannel())) {
                     SocketChannel sc = s.getChannel();
                     ByteBuffer combined = ByteBuffer.allocate(header.length + body.length);
                     combined.put(header);
                     combined.put(body);
                     combined.flip();
-
                     while (combined.hasRemaining()) {
-                        sc.write(combined); // 비블로킹 모드에서도 안전하게 전송
+                        sc.write(combined);
                     }
                 } else {
                     OutputStream out = s.getOutputStream();

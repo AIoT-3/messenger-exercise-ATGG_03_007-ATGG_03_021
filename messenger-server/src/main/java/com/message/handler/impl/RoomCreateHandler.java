@@ -30,8 +30,8 @@ public class RoomCreateHandler implements Handler {
         return room;
     }
 
-    private void sendSynchronizedRooms(RoomDto.ListResponse roomList){
+    private void sendSynchronizedRooms(RoomDto.ListResponse roomList) {
         String syncResponse = roomSyncResponseMapper.toSyncResponse(roomList.rooms());
-        SocketManagement.sendSynchronizedMessage(SessionManagement.getAllSessionIds(), syncResponse);
+        SocketManagement.getInstance().sendSynchronizedMessage(SessionManagement.getInstance().getAllSessionIds(), syncResponse);
     }
 }
