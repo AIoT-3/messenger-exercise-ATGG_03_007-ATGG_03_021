@@ -8,17 +8,26 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class RoomManagement {
-    private static final Map<Long, RoomEntity> rooms = new ConcurrentHashMap<>();
 
-    public static void addRoom(RoomEntity room) {
+    private static final RoomManagement INSTANCE = new RoomManagement();
+
+    private final Map<Long, RoomEntity> rooms = new ConcurrentHashMap<>();
+
+    private RoomManagement() {}
+
+    public static RoomManagement getInstance() {
+        return INSTANCE;
+    }
+
+    public void addRoom(RoomEntity room) {
         rooms.put(room.getRoomId(), room);
     }
 
-    public static RoomEntity getRoom(long roomId) {
+    public RoomEntity getRoom(long roomId) {
         return rooms.get(roomId);
     }
 
-    public static List<RoomEntity> getAllRooms() {
+    public List<RoomEntity> getAllRooms() {
         return new ArrayList<>(rooms.values());
     }
 }

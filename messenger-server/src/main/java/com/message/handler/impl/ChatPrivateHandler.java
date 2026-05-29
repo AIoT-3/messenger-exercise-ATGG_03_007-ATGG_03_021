@@ -34,10 +34,10 @@ public class ChatPrivateHandler implements Handler {
     }
 
     private void sendSynchronizedPrivate(ChatDto.PrivateRequest privateRequest) {
-        List<String> sessionIdList = List.of(SessionManagement.getSessionId(privateRequest.receiverId()));
+        List<String> sessionIdList = List.of(SessionManagement.getInstance().getSessionId(privateRequest.receiverId()));
 
         String syncResponse = whisperSyncResponseMapper.toSyncResponse(List.of(privateRequest));
 
-        SocketManagement.sendSynchronizedMessage(sessionIdList, syncResponse);
+        SocketManagement.getInstance().sendSynchronizedMessage(sessionIdList, syncResponse);
     }
 }

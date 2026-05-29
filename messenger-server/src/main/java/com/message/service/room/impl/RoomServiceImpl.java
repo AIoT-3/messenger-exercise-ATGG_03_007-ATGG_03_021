@@ -16,75 +16,71 @@ import java.util.Objects;
 @Slf4j
 public class RoomServiceImpl implements RoomService {
 
+    private final AtomicLongIdManagement idManagement;
+    private final RoomManagement roomManagement;
+    private final SessionManagement sessionManagement;
+
+    public RoomServiceImpl() {
+        this(AtomicLongIdManagement.getInstance(), RoomManagement.getInstance(), SessionManagement.getInstance());
+    }
+
+    RoomServiceImpl(AtomicLongIdManagement idManagement, RoomManagement roomManagement, SessionManagement sessionManagement) {
+        this.idManagement = idManagement;
+        this.roomManagement = roomManagement;
+        this.sessionManagement = sessionManagement;
+    }
+
     @Override
     public RoomDto.CreateResponse createRoom(RoomDto.CreateRequest request) {
-        boolean isExist = RoomManagement.getAllRooms().stream()
+        boolean isExist = roomManagement.getAllRooms().stream()
                 .anyMatch(room -> room.getRoomName().equals(request.roomName()));
 
-        if(isExist) {
+        if (isExist) {
             throw new BusinessException(ErrorManagement.Room.ALREADY_EXISTS, "이미 존재하는 채팅방입니다.", 400);
         }
 
-        // 아이디 생성
-        long roomId = AtomicLongIdManagement.getRoomIdSequenceIncreateAndGet();
-
-        // 엔티티 생성
+        long roomId = idManagement.getRoomIdSequenceIncrementAndGet();
         RoomEntity newRoom = new RoomEntity(roomId, request.roomName(), 0);
+        roomManagement.addRoom(newRoom);
 
-        // 엔티티 저장
-        RoomManagement.addRoom(newRoom);
-
-        // 리스폰스 디티오 변환
         return new RoomDto.CreateResponse(roomId, request.roomName());
     }
 
     @Override
     public RoomDto.ListResponse getRoomList() {
-        // 모든 방 가져오기, 변환
-        List<RoomDto.RoomSummary> summaries = RoomManagement.getAllRooms().stream()
-                .map(room -> new RoomDto.RoomSummary(
-                        room.getRoomId(),
-                        room.getRoomName(),
-                        room.getUserCount()))
+        List<RoomDto.RoomSummary> summaries = roomManagement.getAllRooms().stream()
+                .map(room -> new RoomDto.RoomSummary(room.getRoomId(), room.getRoomName(), room.getUserCount()))
                 .toList();
-
         return new RoomDto.ListResponse(summaries);
     }
 
     @Override
     public RoomDto.EnterResponse enterRoom(String sessionId, RoomDto.EnterRequest request) {
-        // 방 찾자
-        RoomEntity room = RoomManagement.getRoom(request.roomId());
-
+        RoomEntity room = roomManagement.getRoom(request.roomId());
         if (Objects.isNull(room)) {
             throw new BusinessException(ErrorManagement.Room.NOT_FOUND, "채팅방을 찾을 수 없습니다.", 404);
         }
 
-        // 방에 입장 (유저 아이디 추가)
-        String userId = SessionManagement.getUserId(sessionId);
+        String userId = sessionManagement.getUserId(sessionId);
         room.addParticipant(userId);
 
         List<String> userList = room.getParticipantUserIds().stream()
-                .map(SessionManagement::getUserId) // 여기서부터
-                .filter(Objects::nonNull) // 널체크함
+                .map(sessionManagement::getUserId)
+                .filter(Objects::nonNull)
                 .toList();
 
         log.debug("[채팅방 입장 완료] RoomId: {}, UserId: {}", room.getRoomId(), userList);
-
         return new RoomDto.EnterResponse(room.getRoomId(), userList);
     }
 
     @Override
     public void exitRoom(String sessionId, RoomDto.ExitRequest request) {
-        // 방 찾기
-        RoomEntity room = RoomManagement.getRoom(request.roomId());
-
+        RoomEntity room = roomManagement.getRoom(request.roomId());
         if (Objects.isNull(room)) {
             throw new BusinessException(ErrorManagement.Room.NOT_FOUND, "채팅방을 찾을 수 없습니다.", 404);
         }
 
-        // 방이 존재한다면 나가라
-        String userId = SessionManagement.getUserId(sessionId);
+        String userId = sessionManagement.getUserId(sessionId);
         room.removeParticipant(userId);
         log.debug("[채팅방 나가기 완료] RoomId: {}, SessionId: {}", request.roomId(), sessionId);
     }

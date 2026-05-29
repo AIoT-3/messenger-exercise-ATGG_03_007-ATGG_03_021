@@ -24,7 +24,7 @@ public class WhisperSyncResponseMapper extends AbstractSyncResponseMapper<ChatDt
                 TypeManagement.Sync.PRIVATE_CHAT,
                 true,
                 OffsetDateTime.now(),
-                AtomicLongIdManagement.getResponseMessageIdSequenceIncreateAndGet()
+                AtomicLongIdManagement.getInstance().getResponseMessageIdSequenceIncrementAndGet()
         );
         SynchronizedDto.PrivateSyncResponse privateSyncResponse = mapper.convertValue(list.getFirst(), SynchronizedDto.PrivateSyncResponse.class);
         ResponseDto responseDto = new ResponseDto(responseHeader, privateSyncResponse);

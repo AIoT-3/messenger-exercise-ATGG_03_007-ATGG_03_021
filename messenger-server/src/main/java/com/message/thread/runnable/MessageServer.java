@@ -31,7 +31,7 @@ public class MessageServer implements Runnable {
 
     public MessageServer(int port) {
         if (port <= 0) {
-            throw new IllegalArgumentException(String.format("port:%d", port));
+            throw new IllegalArgumentException("포트 번호는 1 이상이어야 합니다. port=" + port);
         }
 
         this.port = port;
@@ -48,17 +48,25 @@ public class MessageServer implements Runnable {
 
     @Override
     public void run() {
-        //thread pool start
         workerThreadPool.start();
+        log.info("서버가 시작되었습니다. port={}", port);
 
         while (!Thread.currentThread().isInterrupted()) {
             try {
                 Socket client = serverSocket.accept();
                 requestChannel.addJob(new MessageDispatcher(client));
             } catch (IOException e) {
-                Thread.currentThread().interrupt();
+                if (serverSocket.isClosed()) {
+                    log.info("서버 소켓이 종료되어 루프를 빠져나갑니다.");
+                    Thread.currentThread().interrupt();
+                } else {
+                    // 일시적 오류(연결 거절 등)는 로그만 남기고 계속 수락 대기
+                    log.error("[서버] 클라이언트 연결 수락 중 오류 발생, 계속 대기합니다: {}", e.getMessage());
+                }
             }
         }
+
+        log.info("서버 루프가 종료되었습니다.");
     }
 
     public static boolean addClient(String id, Socket socket) {

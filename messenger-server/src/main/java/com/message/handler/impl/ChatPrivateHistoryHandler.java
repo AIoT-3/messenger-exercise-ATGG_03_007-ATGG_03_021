@@ -26,7 +26,7 @@ public class ChatPrivateHistoryHandler implements Handler {
     public Object execute(HeaderDto.RequestHeader header, RequestDataDto data) {
         ChatDto.PrivateHistoryRequest request = (ChatDto.PrivateHistoryRequest) data;
 
-        String userId = SessionManagement.getUserId(header.sessionId());
+        String userId = SessionManagement.getInstance().getUserId(header.sessionId());
 
         List<ChatDto.PrivateRequest> privateHistory = chatService.getPrivateHistory(userId, request.targetId());
 
