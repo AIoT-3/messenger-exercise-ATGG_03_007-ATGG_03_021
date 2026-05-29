@@ -5,6 +5,7 @@ import com.message.action.impl.RequestMessageAction;
 import com.message.observer.Observer;
 import com.message.observer.impl.MessageRecvObserver;
 import com.message.observer.impl.MessageSendObserver;
+import com.message.connection.ClientConnection;
 import com.message.runnable.ReceivedMessageClient;
 import com.message.session.ClientSession;
 import com.message.subject.EventType;
@@ -25,8 +26,8 @@ public class ConsoleClientMain {
         Thread receiverThread = null;
 
         try {
-            // 1. 서버 연결 (Managed by ClientSession)
-            ClientSession.connect();
+            // 1. 서버 연결
+            ClientConnection.getInstance().connect();
 
             // 2. Observer 설정 (SEND)
             RequestMessageAction sendAction = new RequestMessageAction();
@@ -41,7 +42,7 @@ public class ConsoleClientMain {
             log.debug("RECV Observer registered.");
 
             // 4. 수신 스레드 시작
-            Socket socket = ClientSession.getSocket();
+            Socket socket = ClientConnection.getInstance().getSocket();
             ReceivedMessageClient receiver = new ReceivedMessageClient(socket, subject);
             receiverThread = new Thread(receiver, "ConsoleReceivedMessageClient");
             receiverThread.setDaemon(true);
@@ -67,7 +68,7 @@ public class ConsoleClientMain {
             if (receiverThread != null && receiverThread.isAlive()) {
                 receiverThread.interrupt(); // Signal the receiver thread to stop
             }
-            ClientSession.close();
+            ClientConnection.getInstance().close();
             log.info("Client has been shut down.");
         }
     }

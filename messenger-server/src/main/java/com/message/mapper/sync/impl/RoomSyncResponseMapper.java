@@ -19,7 +19,7 @@ public class RoomSyncResponseMapper extends AbstractSyncResponseMapper<RoomDto.R
                 TypeManagement.Sync.ROOM,
                 true,
                 OffsetDateTime.now(),
-                AtomicLongIdManagement.getResponseMessageIdSequenceIncreateAndGet()
+                AtomicLongIdManagement.getInstance().getResponseMessageIdSequenceIncrementAndGet()
         );
         SynchronizedDto.RoomListSync roomListSync = new SynchronizedDto.RoomListSync(list);
         ResponseDto responseDto = new ResponseDto(responseHeader, roomListSync);

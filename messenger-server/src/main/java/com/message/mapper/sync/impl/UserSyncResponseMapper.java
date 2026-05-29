@@ -21,7 +21,7 @@ public class UserSyncResponseMapper extends AbstractSyncResponseMapper<UserDto.U
                 TypeManagement.Sync.USER,
                 true,
                 OffsetDateTime.now(),
-                AtomicLongIdManagement.getResponseMessageIdSequenceIncreateAndGet()
+                AtomicLongIdManagement.getInstance().getResponseMessageIdSequenceIncrementAndGet()
         );
         SynchronizedDto.UserSync userSync = new SynchronizedDto.UserSync(list);
         ResponseDto responseDto = new ResponseDto(responseHeader, userSync);

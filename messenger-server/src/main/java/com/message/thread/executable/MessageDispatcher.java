@@ -10,6 +10,7 @@ import com.message.dto.HeaderDto;
 import com.message.dto.RequestDto;
 import com.message.dto.data.RequestDataDto;
 import com.message.dto.data.impl.ErrorDto;
+import com.message.context.SessionContext;
 import com.message.exception.GlobalExceptionHandler;
 import com.message.exception.custom.handler.HandlerNotFoundException;
 import com.message.filter.FilterChain;
@@ -32,7 +33,6 @@ public class MessageDispatcher implements Executable {
     private final DispatchMapper dispatchMapper = new DispatchMapperImpl();
     private final GlobalExceptionHandler globalExceptionHandler = new GlobalExceptionHandler();
     private final Socket socket;
-    private final FilterChain filterChain = FilterChain.getFilterChain();
 
     // 세션 아이디 보관할 변수 추가함. execute()의 finally에서 removeSocket 호출하기 위해
     private String currentSessionId;
@@ -117,12 +117,16 @@ public class MessageDispatcher implements Executable {
                 if (!socket.isClosed()) {
                     socket.close();
                 }
-                SocketManagement.removeSocket(socket);
+                SocketManagement.getInstance().removeSocket(socket);
                 log.debug("[소캣 정리] 클라이언트 종료로 인한 소켓 제거");
 
                 if (Objects.nonNull(currentSessionId)) {
-                    SessionManagement.deleteSession(currentSessionId);
-                    log.debug("[세션 정리] 클라이언트 종료로 인한 세션 제거 - sessionId: {}", currentSessionId);
+                    try {
+                        SessionManagement.getInstance().deleteSession(currentSessionId);
+                        log.debug("[세션 정리] 클라이언트 종료로 인한 세션 제거 - sessionId: {}", currentSessionId);
+                    } catch (Exception ex) {
+                        log.warn("[세션 정리] 이미 제거된 세션: {}", currentSessionId);
+                    }
                 }
             } catch (IOException e) {
                 log.error("소켓 종료 실패: {}", e.getMessage());
@@ -139,11 +143,14 @@ public class MessageDispatcher implements Executable {
             HeaderDto.RequestHeader requestHeader = dispatchMapper.requestHeaderParser(rootNode);
 
             this.currentSessionId = requestHeader.sessionId();
+            SessionContext.set(this.currentSessionId);
 
             RequestDataDto requestData = dispatchMapper.requestDataParser(requestHeader.type(), rootNode);
 
             RequestDto request = dispatchMapper.requestParser(requestHeader, requestData);
 
+            // 매 요청마다 새 FilterChain 생성 - 이터레이터 재사용 방지
+            FilterChain filterChain = FilterChain.getFilterChain();
             filterChain.doFilter(request);
 
             // 3. Data 영역만 따로 떼어냅니다.
@@ -161,9 +168,9 @@ public class MessageDispatcher implements Executable {
             // 결과가 있을 때만 진행하도록 수정
 
             if (requestHeader.type().equals(TypeManagement.Auth.LOGIN)) {
-                SocketManagement.checkSocket(requestHeader.type(), result, socket);
+                SocketManagement.getInstance().checkSocket(requestHeader.type(), result, socket);
             } else if (requestHeader.type().equals(TypeManagement.Auth.LOGOUT)) {
-                SocketManagement.checkSocket(requestHeader.type(), requestHeader, socket);
+                SocketManagement.getInstance().checkSocket(requestHeader.type(), requestHeader, socket);
             }
 
             // 6. 결과 반환 (성공 응답 생성)
@@ -178,6 +185,8 @@ public class MessageDispatcher implements Executable {
                 log.error("[오류 메시지 디스패치] JSON 변환 중 치명적인 오류 발생");
                 return "[오류 메시지 디스패치] JSON 변환 중 치명적인 오류 발생";
             }
+        } finally {
+            SessionContext.clear();
         }
     }
 }

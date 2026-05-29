@@ -13,6 +13,16 @@ import java.util.Objects;
 @Slf4j
 public class AuthServiceImpl implements AuthService {
 
+    private final UserManagement userManagement;
+
+    public AuthServiceImpl() {
+        this(UserManagement.getInstance());
+    }
+
+    AuthServiceImpl(UserManagement userManagement) {
+        this.userManagement = userManagement;
+    }
+
     @Override
     public UserEntity login(AuthDto.LoginRequest request) {
         if (request.userId().isBlank() || request.password().isBlank()) {
@@ -20,18 +30,17 @@ public class AuthServiceImpl implements AuthService {
             throw new LoginInvalidRequestException("[로그인 시도] 로그인 정보가 비어있습니다.");
         }
 
-        UserEntity user = UserManagement.getUser(request.userId());
+        UserEntity user = userManagement.getUser(request.userId());
         if (Objects.isNull(user)) {
             log.debug("[로그인 시도] 존재하지 않는 유저입니다.");
             throw new UserNotFoundException("[로그인 시도] 로그인 정보가 잘못 되었습니다.");
         }
 
-        if (!user.getPassWord().equals(request.password())){
+        if (!user.getPassWord().equals(request.password())) {
             log.debug("[로그인 시도] 로그인 정보가 잘못 되었습니다 - userId: {}", request.userId());
-            throw new LoginInvalidRequestException("[로그인 시도] 로그인 정보가 잘못 되었습니다.");
+            throw new LoginInvalidRequestException("[로그인 시도] 아이디 또는 비밀번호가 올바르지 않습니다.");
         }
 
         return user;
     }
-
 }

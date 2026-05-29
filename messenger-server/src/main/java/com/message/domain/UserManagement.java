@@ -10,9 +10,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class UserManagement {
-    private static final Map<String, UserEntity> users = new ConcurrentHashMap<>();
 
-    static {
+    private static final UserManagement INSTANCE = new UserManagement();
+
+    private final Map<String, UserEntity> users = new ConcurrentHashMap<>();
+
+    private UserManagement() {
         UserEntity user = new UserEntity("marco", "마르코", "nhnacademy123");
         UserEntity user1 = new UserEntity("admin", "admin", "1234");
         UserEntity user2 = new UserEntity("jaemin", "재민", "1234");
@@ -21,27 +24,22 @@ public class UserManagement {
         users.put(user2.getUserId(), user2);
     }
 
-    private UserManagement() {
+    public static UserManagement getInstance() {
+        return INSTANCE;
     }
 
-    public static void addUser(UserEntity user){
-        if(users.containsKey(user.getUserId())){
+    public void addUser(UserEntity user) {
+        if (users.containsKey(user.getUserId())) {
             throw new LoginInvalidRequestException("이미 존재하는 아이디입니다.");
         }
-
         users.put(user.getUserId(), user);
     }
 
-    public static UserEntity getUser(String userId){
-        if(!users.containsKey(userId)){
+    public UserEntity getUser(String userId) {
+        if (!users.containsKey(userId)) {
             log.warn("존재하지 않는 유저 정보 요청 - userId: {}", userId);
             throw new UserNotFoundException("존재하지 않는 유저 정보 요청입니다.");
         }
-
         return users.get(userId);
-    }
-
-    public static UserManagement createUserManagement() {
-        return new UserManagement();
     }
 }

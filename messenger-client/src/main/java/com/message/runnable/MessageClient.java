@@ -3,10 +3,10 @@ package com.message.runnable;
 import com.message.action.impl.RequestMessageAction;
 import com.message.action.impl.ResponseMessageAction;
 import com.message.cofig.AppConfig;
+import com.message.connection.ClientConnection;
 import com.message.observer.Observer;
 import com.message.observer.impl.MessageRecvObserver;
 import com.message.observer.impl.MessageSendObserver;
-import com.message.session.ClientSession;
 import com.message.subject.EventType;
 import com.message.subject.MessageSubject;
 import com.message.subject.Subject;
@@ -53,7 +53,7 @@ public class MessageClient implements Runnable {
     public void run() {
         try {
             // 1. 서버 연결
-            ClientSession.connect();
+            ClientConnection.getInstance().connect();
             log.info("서버에 연결되었습니다 - {}:{}", serverAddress, serverPort);
 
             // 2. UI 실행 (Swing EDT에서 실행)
@@ -101,7 +101,7 @@ public class MessageClient implements Runnable {
      * 메시지 수신 스레드 시작
      */
     private void startReceiverThread() {
-        Socket socket = ClientSession.getSocket();
+        Socket socket = ClientConnection.getInstance().getSocket();
         ReceivedMessageClient receiver = new ReceivedMessageClient(socket, subject);
         receiverThread = new Thread(receiver, "ReceivedMessageClient");
         receiverThread.setDaemon(true);
@@ -129,13 +129,11 @@ public class MessageClient implements Runnable {
     private void cleanup() {
         log.info("클라이언트 종료 중...");
 
-        // 수신 스레드 종료
         if (receiverThread != null && receiverThread.isAlive()) {
             receiverThread.interrupt();
         }
 
-        // 세션 연결 종료
-        ClientSession.close();
+        ClientConnection.getInstance().close();
 
         log.info("클라이언트가 종료되었습니다.");
     }

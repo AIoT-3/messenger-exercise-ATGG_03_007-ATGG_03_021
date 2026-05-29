@@ -14,8 +14,11 @@ public class WorkerThreadPool {
     }
 
     public WorkerThreadPool(Runnable runnable, int poolSize) {
-        if (poolSize < 1 || Objects.isNull(runnable)) {
-            throw new IllegalArgumentException();
+        if (poolSize < 1) {
+            throw new IllegalArgumentException("스레드 풀 크기는 1 이상이어야 합니다. poolSize=" + poolSize);
+        }
+        if (Objects.isNull(runnable)) {
+            throw new IllegalArgumentException("Runnable은 null일 수 없습니다.");
         }
 
         this.poolSize = poolSize;
